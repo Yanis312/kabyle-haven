@@ -11,8 +11,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { LogIn, UserPlus, Loader2 } from "lucide-react";
 
 const Auth = () => {
-  const { signIn, signUp, loading, user } = useAuth();
+  const { signIn, signUp, loading, user, isSigningOut } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  const [authLoading, setAuthLoading] = useState(false);
   const navigate = useNavigate();
   
   // Login state
@@ -27,20 +28,33 @@ const Auth = () => {
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<"client" | "proprietaire">("client");
   
-  console.log("Auth page rendering, user state:", { hasUser: !!user, loading });
+  console.log("Auth page rendering, user state:", { 
+    hasUser: !!user, 
+    loading, 
+    isSigningOut, 
+    authLoading
+  });
   
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
+    if (user && !isSigningOut) {
       console.log("User already logged in, redirecting from auth page");
       navigate("/", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, isSigningOut]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Login form submitted with email:", loginEmail);
-    await signIn(loginEmail, loginPassword);
+    
+    try {
+      setAuthLoading(true);
+      await signIn(loginEmail, loginPassword);
+    } catch (error) {
+      console.error("Login error in Auth component:", error);
+    } finally {
+      setAuthLoading(false);
+    }
   };
   
   const handleRegister = async (e: React.FormEvent) => {
@@ -52,7 +66,14 @@ const Auth = () => {
       return alert("Les mots de passe ne correspondent pas");
     }
     
-    await signUp(registerEmail, registerPassword, firstName, lastName, role);
+    try {
+      setAuthLoading(true);
+      await signUp(registerEmail, registerPassword, firstName, lastName, role);
+    } catch (error) {
+      console.error("Register error in Auth component:", error);
+    } finally {
+      setAuthLoading(false);
+    }
   };
   
   return (
@@ -101,9 +122,9 @@ const Auth = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-kabyle-terracotta hover:bg-kabyle-terracotta/90"
-                    disabled={loading}
+                    disabled={authLoading || loading}
                   >
-                    {loading ? (
+                    {(authLoading || loading) ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
                         Connexion...
@@ -222,9 +243,9 @@ const Auth = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-kabyle-blue hover:bg-kabyle-blue/90"
-                    disabled={loading}
+                    disabled={authLoading || loading}
                   >
-                    {loading ? (
+                    {(authLoading || loading) ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Création du compte...

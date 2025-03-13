@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const navigate = useNavigate();
 
   console.log("AuthProvider initializing, current state:", { 
@@ -45,86 +46,129 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isSigningOut
   });
 
+  // Initialize auth state
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session ? "Active session found" : "No session found");
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        console.log("User found in session, fetching profile for:", session.user.id);
-        fetchProfile(session.user.id);
-      } else {
-        console.log("No user in session, setting loading to false");
+    const initAuth = async () => {
+      try {
+        // Get initial session
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("Initial session check:", sessionData.session ? "Active session found" : "No session found");
+        
+        setSession(sessionData.session);
+        setUser(sessionData.session?.user ?? null);
+        
+        if (sessionData.session?.user) {
+          console.log("User found in session, fetching profile for:", sessionData.session.user.id);
+          await fetchProfile(sessionData.session.user.id);
+        } else {
+          console.log("No user in session, setting loading to false");
+          setLoading(false);
+        }
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            console.log("Auth state changed:", event, newSession ? "Session exists" : "No session");
+            
+            if (event === 'SIGNED_OUT') {
+              console.log("SIGNED_OUT event - clearing state and redirecting");
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setLoading(false);
+              setIsSigningOut(false);
+              
+              // Force redirect to auth page on sign out
+              navigate("/auth", { replace: true });
+              return;
+            }
+            
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            
+            if (newSession?.user) {
+              console.log("Auth state change - user exists, fetching profile");
+              await fetchProfile(newSession.user.id);
+            } else {
+              console.log("Auth state change - no user, clearing profile");
+              setProfile(null);
+              setLoading(false);
+            }
+          }
+        );
+        
+        authSubscriptionRef.current = subscription;
+      } catch (error) {
+        console.error("Error initializing auth:", error);
         setLoading(false);
       }
-    });
+    };
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event, session ? "Session exists" : "No session");
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          console.log("Auth state change - user exists, fetching profile");
-          await fetchProfile(session.user.id);
-        } else {
-          console.log("Auth state change - no user, clearing profile");
-          setProfile(null);
-          setLoading(false);
-          
-          // If user is logged out, redirect to auth page
-          if (event === 'SIGNED_OUT') {
-            console.log("SIGNED_OUT event - redirecting to auth page");
-            navigate("/auth", { replace: true });
-          }
-        }
-      }
-    );
+    initAuth();
 
+    // Cleanup
     return () => {
       console.log("Cleaning up auth subscription");
-      subscription.unsubscribe();
+      if (authSubscriptionRef.current) {
+        authSubscriptionRef.current.unsubscribe();
+      }
     };
   }, [navigate]);
 
-  // Check session status when window gets focus
+  // Check session status when window gets focus or visibility changes
   useEffect(() => {
-    const handleFocus = async () => {
-      console.log("Window focused - checking session...");
-      const { data } = await supabase.auth.getSession();
+    const checkSession = async () => {
+      console.log("Window focused or visibility changed - checking session...");
+      if (isSigningOut) {
+        console.log("Skipping session check - currently signing out");
+        return;
+      }
       
-      // If session state doesn't match what we have stored, update it
-      if (!!session !== !!data.session) {
-        console.log("Session state mismatch detected on focus - updating...");
-        console.log("Current session state:", !!session);
-        console.log("New session state:", !!data.session);
+      try {
+        const { data } = await supabase.auth.getSession();
+        console.log("Session check result:", data.session ? "Session exists" : "No session");
         
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
+        const sessionChanged = !!session !== !!data.session;
+        const userChanged = session?.user?.id !== data.session?.user?.id;
         
-        if (data.session?.user) {
-          console.log("Session exists after tab switch, fetching profile");
-          await fetchProfile(data.session.user.id);
+        if (sessionChanged || userChanged) {
+          console.log("Session state changed - updating...");
+          
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
+          
+          if (data.session?.user) {
+            console.log("User exists after tab switch, fetching profile");
+            await fetchProfile(data.session.user.id);
+          } else {
+            console.log("No user after tab switch, clearing profile");
+            setProfile(null);
+            navigate("/auth", { replace: true });
+          }
         } else {
-          console.log("No session after tab switch, clearing profile");
-          setProfile(null);
-          // Redirect to auth page if session is gone
-          navigate("/auth", { replace: true });
+          console.log("Session state unchanged after check");
         }
-      } else {
-        console.log("Session state unchanged after focus");
+      } catch (error) {
+        console.error("Error checking session:", error);
       }
     };
 
-    window.addEventListener('focus', handleFocus);
+    // Check on focus and visibility change
+    window.addEventListener('focus', checkSession);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkSession();
+      }
+    });
+    
+    // Also check immediately on mount
+    checkSession();
     
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', checkSession);
+      document.removeEventListener('visibilitychange', () => {});
     };
-  }, [session, navigate]);
+  }, [session, navigate, isSigningOut]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -353,30 +397,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Force a page reload as last resort
       console.log("Forcing page reload");
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = '/auth';
       }, 100);
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast.error(`Erreur de déconnexion: ${error.message}`);
       
-      // Try to restore session if there was an error
-      console.log("Attempting to restore session after error");
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log("Restored session:", data.session ? "Session exists" : "No session");
-        
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-        
-        if (data.session?.user) {
-          await fetchProfile(data.session.user.id);
-        }
-      } catch (restoreError) {
-        console.error("Failed to restore session:", restoreError);
-      }
-    } finally {
-      console.log("Sign out process completed");
-      setLoading(false);
+      // Reset signing out state to allow retrying
       setIsSigningOut(false);
     }
   };

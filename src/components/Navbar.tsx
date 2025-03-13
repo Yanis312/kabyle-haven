@@ -37,7 +37,7 @@ const Navbar = () => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("Logout button clicked, current state:", { isSigningOut });
+    console.log("Logout button clicked, current state:", { isSigningOut, hasUser: !!user });
     if (isSigningOut) {
       console.log("Ignoring click - already signing out");
       return;
