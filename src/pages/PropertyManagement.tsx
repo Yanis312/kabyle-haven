@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,7 +45,6 @@ const PropertyManagement = () => {
       console.log("Checking if storage bucket exists:", STORAGE_BUCKET);
       console.log("Current user:", user);
       
-      // Check if we have a valid session before trying to create a bucket
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       console.log("Current session for bucket check:", sessionData?.session ? "User authenticated" : "No session");
       console.log("Session error:", sessionError);
@@ -151,16 +149,32 @@ const PropertyManagement = () => {
       setIsSubmitting(true);
       setIsUploading(true);
       
-      const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
-      const uploadedFiles: File[] = [];
+      const fileInputDataElement = form.querySelector<HTMLInputElement>('#existing-images');
+      let existingImages: string[] = [];
       
-      if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        for (let i = 0; i < fileInput.files.length; i++) {
-          uploadedFiles.push(fileInput.files[i]);
+      if (fileInputDataElement && fileInputDataElement.dataset.images) {
+        try {
+          existingImages = JSON.parse(fileInputDataElement.dataset.images);
+        } catch (e) {
+          console.error("Error parsing existing images:", e);
+          existingImages = [];
         }
       }
       
-      const existingImages = editingProperty?.images || [];
+      console.log("Existing images from hidden input:", existingImages);
+      
+      const uploadedFiles: File[] = [];
+      const fileInputs = form.querySelectorAll('input[type="file"]');
+      
+      fileInputs.forEach(input => {
+        if (input.files && input.files.length > 0) {
+          for (let i = 0; i < input.files.length; i++) {
+            uploadedFiles.push(input.files[i]);
+          }
+        }
+      });
+      
+      console.log("Files to upload:", uploadedFiles.length);
       
       let allImages = [...existingImages];
       
@@ -168,12 +182,10 @@ const PropertyManagement = () => {
         console.log("Uploading files to bucket:", STORAGE_BUCKET);
         console.log("Files to upload:", uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
         
-        // Try to initialize the bucket again if not done already
         if (!bucketInitialized) {
           await checkStorageBucket();
         }
         
-        // Double check session before uploading
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
           throw new Error("Session expired, please log in again");
@@ -181,32 +193,19 @@ const PropertyManagement = () => {
         
         console.log("Session for upload:", sessionData.session.user.id);
         
-        // Try to upload without creating a folder path
         let uploadedImageUrls: string[] = [];
         try {
           uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET);
+          console.log("Uploaded image URLs:", uploadedImageUrls);
+          
+          if (uploadedImageUrls.length > 0) {
+            allImages = [...allImages, ...uploadedImageUrls];
+            console.log("Combined images array:", allImages);
+          }
         } catch (uploadError: any) {
           console.error("Error during upload:", uploadError);
-          
-          // If the error is related to RLS, try without user ID path
-          if (uploadError.message?.includes("row-level security")) {
-            console.log("Trying upload with different path strategy");
-            // For now, we'll just skip the upload and save without images
-            toast.error("Cannot upload images due to permissions. Your property will be saved without images.");
-          } else {
-            throw uploadError;
-          }
+          toast.error(`Erreur lors du téléchargement des images: ${uploadError.message}`);
         }
-        
-        console.log("Uploaded image URLs:", uploadedImageUrls);
-        
-        const validUrls = uploadedImageUrls.filter(url => url && url.startsWith('http'));
-        if (validUrls.length !== uploadedImageUrls.length) {
-          console.error("Some URLs are invalid:", uploadedImageUrls);
-          toast.error("Certaines images n'ont pas pu être téléchargées correctement");
-        }
-        
-        allImages = [...allImages, ...validUrls];
       }
       
       setIsUploading(false);
@@ -223,6 +222,7 @@ const PropertyManagement = () => {
       };
       
       console.log("Saving property data:", propertyData);
+      console.log("Images array being saved:", propertyData.images);
       
       let result;
       

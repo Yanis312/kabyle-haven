@@ -136,6 +136,14 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
         </div>
         
         {preview && (files.length > 0 || fileUrls.length > 0) && renderPreviews()}
+        
+        {/* Add a hidden input to pass the existing images data */}
+        <input 
+          type="hidden" 
+          id="existing-images" 
+          name="existing-images"
+          data-images={JSON.stringify(fileUrls)}
+        />
       </div>
     )
   }
