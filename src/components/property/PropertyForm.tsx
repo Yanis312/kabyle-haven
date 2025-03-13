@@ -65,7 +65,15 @@ const PropertyForm = ({
       setDescription(editingProperty.description || "");
       setPrice(editingProperty.price.toString());
       setCapacity(editingProperty.capacity.toString());
-      setExistingImages(editingProperty.images || []);
+      
+      // Ensure images array is handled properly
+      if (editingProperty.images && Array.isArray(editingProperty.images)) {
+        console.log("Setting existing images from property:", editingProperty.images);
+        setExistingImages(editingProperty.images);
+      } else {
+        console.log("No images in property or not an array:", editingProperty.images);
+        setExistingImages([]);
+      }
       
       if (editingProperty.wilaya_id) {
         setSelectedWilaya(editingProperty.wilaya_id.toString());
@@ -106,6 +114,7 @@ const PropertyForm = ({
   };
   
   const handleRemoveImage = async (url: string) => {
+    console.log("Removing image:", url);
     setExistingImages(existingImages.filter(img => img !== url));
     await onRemoveImage(url);
   };
@@ -117,7 +126,7 @@ const PropertyForm = ({
     capacity, 
     selectedWilaya, 
     selectedCommune,
-    uploadedFiles,
+    uploadedFiles: uploadedFiles.length,
     existingImages
   });
 
@@ -237,12 +246,6 @@ const PropertyForm = ({
             urls={existingImages}
             onRemoveUrl={handleRemoveImage}
             maxFiles={5}
-          />
-          <input 
-            type="hidden" 
-            id="existing-images" 
-            name="existing-images"
-            data-images={JSON.stringify(existingImages)}
           />
         </div>
       </div>

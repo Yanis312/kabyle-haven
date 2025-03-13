@@ -39,9 +39,13 @@ export const uploadFiles = async (
 
     console.log("Available buckets:", buckets);
     
-    // Bucket should exist from our SQL migration
-    if (!buckets.some(b => b.name === bucketName)) {
-      console.log(`Bucket ${bucketName} not found in the list, but it should exist via SQL`);
+    // Check if the bucket exists
+    const bucketExists = buckets.some(b => b.name === bucketName);
+    console.log(`Bucket ${bucketName} exists:`, bucketExists);
+    
+    if (!bucketExists) {
+      console.error(`Bucket ${bucketName} does not exist. Please create it first.`);
+      throw new Error(`Bucket ${bucketName} does not exist`);
     }
     
     // Check bucket permissions
@@ -77,17 +81,12 @@ export const uploadFiles = async (
           console.error("Error message:", error.message);
           console.error("Error name:", error.name);
           console.error("Error code:", (error as any).code);
-          
-          // Provide more specific error feedback based on error type
-          if (error.message.includes("row-level security")) {
-            throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
-          }
           throw error;
         }
         
         console.log('File uploaded successfully:', data);
         
-        // Get public URL - ensure we're using the complete URL
+        // Get public URL
         const { data: publicUrlData } = supabase.storage
           .from(bucketName)
           .getPublicUrl(filePath);
@@ -102,7 +101,9 @@ export const uploadFiles = async (
     });
     
     // Wait for all uploads to complete
-    return await Promise.all(uploadPromises);
+    const uploadedUrls = await Promise.all(uploadPromises);
+    console.log("All files uploaded successfully, returning URLs:", uploadedUrls);
+    return uploadedUrls;
     
   } catch (error) {
     console.error('Error in uploadFiles:', error);
@@ -157,11 +158,6 @@ export const removeFiles = async (
       console.error('Error removing files:', error);
       console.error("Error message:", error.message);
       console.error("Error name:", error.name);
-      
-      // Provide more specific error feedback
-      if (error.message.includes("row-level security")) {
-        throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
-      }
       throw error;
     }
     

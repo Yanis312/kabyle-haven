@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -155,6 +156,7 @@ const PropertyManagement = () => {
       if (fileInputDataElement && fileInputDataElement.dataset.images) {
         try {
           existingImages = JSON.parse(fileInputDataElement.dataset.images);
+          console.log("Parsed existing images:", existingImages);
         } catch (e) {
           console.error("Error parsing existing images:", e);
           existingImages = [];
@@ -196,7 +198,7 @@ const PropertyManagement = () => {
         let uploadedImageUrls: string[] = [];
         try {
           uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET);
-          console.log("Uploaded image URLs:", uploadedImageUrls);
+          console.log("Upload complete. Uploaded image URLs:", uploadedImageUrls);
           
           if (uploadedImageUrls.length > 0) {
             allImages = [...allImages, ...uploadedImageUrls];

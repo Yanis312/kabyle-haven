@@ -33,14 +33,23 @@ const PropertyCard = ({
     return wilaya ? wilaya.name : "Non spécifié";
   };
 
+  // Ensure property.images is an array or set to empty array if null
+  const images = property.images && Array.isArray(property.images) ? property.images : [];
+  
+  console.log(`PropertyCard: Property ${property.id} has ${images.length} images:`, images);
+
   return (
     <Card className="overflow-hidden">
       <div className="aspect-video bg-gray-100 relative">
-        {property.images && property.images[0] ? (
+        {images.length > 0 ? (
           <img 
-            src={property.images[0]} 
+            src={images[0]} 
             alt={property.name}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.error("Image failed to load:", images[0], e);
+              (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Image+non+disponible";
+            }}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
@@ -78,19 +87,23 @@ const PropertyCard = ({
             </div>
           </div>
           
-          {property.images && property.images.length > 1 && (
+          {images.length > 1 && (
             <div className="flex gap-1 mt-2">
-              {property.images.slice(1, 4).map((img, idx) => (
+              {images.slice(1, 4).map((img, idx) => (
                 <img 
                   key={idx} 
                   src={img} 
                   alt={`${property.name} image ${idx + 2}`}
                   className="h-12 w-12 rounded object-cover"
+                  onError={(e) => {
+                    console.error("Thumbnail failed to load:", img, e);
+                    (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Error";
+                  }}
                 />
               ))}
-              {property.images.length > 4 && (
+              {images.length > 4 && (
                 <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">
-                  +{property.images.length - 4}
+                  +{images.length - 4}
                 </div>
               )}
             </div>

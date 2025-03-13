@@ -28,6 +28,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
 
     React.useEffect(() => {
       setFileUrls(urls)
+      console.log("FileInput: URLs updated:", urls);
     }, [urls])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +39,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
       const updatedFiles = [...files, ...newFilesArray].slice(0, maxFiles)
       
       console.log("Files selected:", newFilesArray.length, "Total files:", updatedFiles.length);
+      console.log("Selected files:", updatedFiles.map(f => f.name));
       
       setFiles(updatedFiles)
       if (onFilesChange) {
@@ -61,6 +63,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
     }
 
     const handleRemoveUrl = (urlToRemove: string) => {
+      console.log("Removing URL:", urlToRemove);
       const filteredUrls = fileUrls.filter(url => url !== urlToRemove)
       setFileUrls(filteredUrls)
       if (onRemoveUrl) {
@@ -69,6 +72,9 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
     }
 
     const renderPreviews = () => {
+      console.log("Rendering previews with URLs:", fileUrls);
+      console.log("Rendering previews with Files:", files.length);
+      
       return (
         <div className="mt-2 flex flex-wrap gap-2">
           {fileUrls.map((url, index) => (
@@ -77,6 +83,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
                 src={url} 
                 alt={`Uploaded preview ${index}`} 
                 className="h-full w-full object-cover"
+                onError={(e) => console.error("Image failed to load:", url, e)}
               />
               <button
                 type="button"
@@ -107,6 +114,15 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
         </div>
       )
     }
+
+    // Update the hidden input with current fileUrls whenever they change
+    React.useEffect(() => {
+      const hiddenInput = document.getElementById('existing-images') as HTMLInputElement;
+      if (hiddenInput) {
+        hiddenInput.dataset.images = JSON.stringify(fileUrls);
+        console.log("Updated hidden input with URLs:", fileUrls);
+      }
+    }, [fileUrls]);
 
     return (
       <div className={className}>
