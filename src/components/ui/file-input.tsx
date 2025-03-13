@@ -1,9 +1,7 @@
-
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Input } from "./input"
 import { Button } from "./button"
-import { Cross2Icon } from "@radix-ui/react-icons"
 import { Upload, X } from "lucide-react"
 
 export interface FileInputProps
@@ -43,7 +41,6 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
         onFilesChange(updatedFiles)
       }
       
-      // Reset the input to allow selecting the same file again
       if (inputRef.current) {
         inputRef.current.value = ""
       }
