@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,15 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Kabyle theme colors
+				kabyle: {
+					terracotta: '#F97316', // Orange/terracotta
+					blue: '#0EA5E9',       // Deep blue
+					sand: '#FEC6A1',       // Light sand color
+					earth: '#8B5A2B',      // Earth brown
+					olive: '#556B2F',      // Olive green
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +93,19 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-10px)' },
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'float': 'float 3s ease-in-out infinite',
+			},
+			backgroundImage: {
+				'kabyle-pattern': "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMxLjIgMCAyLjEgMSAyLjEgMi4yIDAgMS4yLTEgMi4yLTIuMSAyLjItMS4yIDAtMi4xLTEtMi4xLTIuMiAwLTEuMiAxLTIuMiAyLjEtMi4yek0yNCAzNmMxLjIgMCAyLjEgMSAyLjEgMi4yIDAgMS4yLTEgMi4yLTIuMSAyLjItMS4yIDAtMi4xLTEtMi4xLTIuMiAwLTEuMiAxLTIuMiAyLjEtMi4yek00OSAzMGw0IDRoLThsNC00em0tMzggMGw0IDRoLThsNC00eiIgZmlsbD0icmdiYSgyNDAsIDEzMywgMzMsIDAuMikiLz48cGF0aCBkPSJNMzAgNDlsNCAxdjhsLTQtMXYtOHptMC0zOGw0IDFWNGwtNC0xdjh6TTE5IDQ5bDQgMXY4bC00LTF2LTh6TTE5IDExbDQgMVY0bC00LTF2OHoiIGZpbGw9InJnYmEoMTQsIDE2NSwgMjMzLCAwLjIpIi8+PC9nPjwvc3ZnPg==')",
 			}
 		}
 	},
