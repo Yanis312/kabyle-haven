@@ -16,21 +16,38 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
     }
     
     const bucketExists = buckets.some(b => b.name === bucketName);
+    console.log("Bucket exists?", bucketExists);
     
     if (!bucketExists) {
-      console.log(`Creating bucket: ${bucketName}`);
-      const { error: createError } = await supabase.storage.createBucket(bucketName, {
+      console.log("Attempting to create bucket:", bucketName);
+      
+      const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
         public: true,
+        fileSizeLimit: 10485760, // 10MB limit
       });
       
       if (createError) {
-        console.error('Error creating bucket:', createError);
+        console.error("Error creating bucket:", createError);
         throw createError;
       }
+      
+      console.log("Bucket creation response:", data);
+    } else {
+      console.log(`Bucket ${bucketName} already exists`);
+      
+      // Update bucket to ensure it's public
+      const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB limit
+      });
+      
+      if (updateError) {
+        console.error("Error updating bucket:", updateError);
+        throw updateError;
+      }
+      
+      console.log(`Bucket ${bucketName} updated to be public`);
     }
-    
-    // Now the bucket should exist and have the proper policies from our SQL migration
-    console.log(`Bucket ${bucketName} exists and should have the proper policies`);
     
     return;
   } catch (error) {

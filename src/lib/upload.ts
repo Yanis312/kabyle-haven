@@ -52,7 +52,7 @@ export const uploadFiles = async (
       
       console.log(`Uploading file: ${file.name} as ${filePath}`);
       
-      // Upload file
+      // Upload file with improved error handling
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
@@ -62,6 +62,10 @@ export const uploadFiles = async (
       
       if (error) {
         console.error('Error uploading file:', error);
+        // Provide more specific error feedback based on error type
+        if (error.message.includes("row-level security")) {
+          throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
+        }
         throw error;
       }
       
@@ -115,13 +119,17 @@ export const removeFiles = async (
     
     console.log('File paths to remove:', filePaths);
     
-    // Remove files
+    // Remove files with improved error handling
     const { data, error } = await supabase.storage
       .from(bucketName)
       .remove(filePaths);
     
     if (error) {
       console.error('Error removing files:', error);
+      // Provide more specific error feedback
+      if (error.message.includes("row-level security")) {
+        throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
+      }
       throw error;
     }
     
