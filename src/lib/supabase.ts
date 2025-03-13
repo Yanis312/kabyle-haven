@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -7,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const createStoragePolicies = async (bucketName: string): Promise<void> => {
   try {
+    console.log(`Setting up storage bucket: ${bucketName}`);
+    
     // Get the current session to check authentication
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     console.log("Current session:", sessionData?.session ? "User authenticated" : "No session", sessionError);
@@ -19,8 +20,8 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       throw bucketsError;
     }
     
-    console.log("All buckets:", buckets);
-    const bucketExists = buckets.some(b => b.name === bucketName);
+    console.log("All buckets:", buckets?.map(b => b.name) || []);
+    const bucketExists = buckets?.some(b => b.name === bucketName);
     console.log("Bucket exists?", bucketExists);
     
     if (!bucketExists) {
@@ -28,42 +29,54 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       console.log("User role:", sessionData?.session?.user?.user_metadata?.role);
       console.log("User id:", sessionData?.session?.user?.id);
       
-      // The bucket should now be created by our SQL migration, but we'll try this as a fallback
+      // Create the bucket if it doesn't exist
       try {
         const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: true,
+          public: true,  // Make bucket public
           fileSizeLimit: 10485760, // 10MB limit
         });
         
         if (createError) {
           console.error("Error creating bucket:", createError);
           console.error("Error message:", createError.message);
-          // Only log properties that exist on the StorageError type
-          console.error("Error name:", createError.name);
-          console.error("Error code:", (createError as any).code);
           throw createError;
         }
         
         console.log("Bucket creation response:", data);
       } catch (createCatchError) {
         console.error("Caught exception creating bucket:", createCatchError);
-        // Don't throw the error here, just log it since the bucket might exist from our SQL
       }
     } else {
       console.log(`Bucket ${bucketName} already exists`);
       
       // Update bucket to ensure it's public
-      const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB limit
-      });
-      
-      if (updateError) {
+      try {
+        const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 10485760, // 10MB limit
+        });
+        
+        if (updateError) {
+          console.error("Error updating bucket:", updateError);
+        } else {
+          console.log(`Bucket ${bucketName} updated to be public`);
+        }
+      } catch (updateError) {
         console.error("Error updating bucket:", updateError);
-        // Just log the error but don't throw it, we'll still try to use the bucket
       }
+    }
+    
+    // Check bucket permissions by trying to list files
+    try {
+      console.log(`Checking bucket ${bucketName} permissions...`);
+      const { data: listData, error: listError } = await supabase.storage.from(bucketName).list();
+      console.log(`List result for ${bucketName}:`, listData || []);
       
-      console.log(`Bucket ${bucketName} updated to be public`);
+      if (listError) {
+        console.error(`List error for ${bucketName}:`, listError);
+      }
+    } catch (listCatchError) {
+      console.error(`Error listing files in bucket ${bucketName}:`, listCatchError);
     }
     
     return;

@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,22 +13,26 @@ export const uploadFiles = async (
   bucketName: string,
   path: string = ''
 ): Promise<string[]> => {
-  if (!files.length) return [];
+  if (!files.length) {
+    console.log("No files to upload");
+    return [];
+  }
   
   try {
     console.log(`Starting upload of ${files.length} files to bucket: ${bucketName}`);
+    console.log("Files to upload:", files.map(f => ({ name: f.name, size: f.size, type: f.type })));
     
     // Check authentication status
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     console.log("Authentication status:", sessionData?.session ? "Authenticated" : "Not authenticated");
     console.log("User ID:", sessionData?.session?.user?.id);
-    console.log("Session error:", sessionError);
     
     if (!sessionData?.session) {
+      console.error("No authentication session found");
       throw new Error("You must be authenticated to upload files");
     }
     
-    // The bucket should already exist from our SQL migration
+    // Check if the bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
     if (bucketsError) {
@@ -37,27 +40,28 @@ export const uploadFiles = async (
       throw bucketsError;
     }
 
-    console.log("Available buckets:", buckets);
+    console.log("Available buckets:", buckets?.map(b => b.name) || []);
     
     // Check if the bucket exists
-    const bucketExists = buckets.some(b => b.name === bucketName);
+    const bucketExists = buckets?.some(b => b.name === bucketName);
     console.log(`Bucket ${bucketName} exists:`, bucketExists);
     
     if (!bucketExists) {
-      console.error(`Bucket ${bucketName} does not exist. Please create it first.`);
-      throw new Error(`Bucket ${bucketName} does not exist`);
+      console.error(`Bucket ${bucketName} does not exist. Creating it now.`);
+      // Create the bucket if it doesn't exist
+      const { data: createData, error: createError } = await supabase.storage.createBucket(bucketName, {
+        public: true, // Make the bucket public
+      });
+      
+      if (createError) {
+        console.error("Error creating bucket:", createError);
+        throw createError;
+      }
+      
+      console.log("Bucket created successfully:", createData);
     }
     
-    // Check bucket permissions
-    console.log(`Checking bucket ${bucketName} permissions...`);
-    try {
-      const { data: listData, error: listError } = await supabase.storage.from(bucketName).list();
-      console.log(`List result for ${bucketName}:`, listData);
-      console.log(`List error for ${bucketName}:`, listError);
-    } catch (listCatchError) {
-      console.error(`Error listing files in bucket ${bucketName}:`, listCatchError);
-    }
-    
+    // Upload each file and get the URLs
     const uploadPromises = files.map(async (file) => {
       // Create a unique file name to prevent collisions
       const fileExt = file.name.split('.').pop();
@@ -78,20 +82,18 @@ export const uploadFiles = async (
         
         if (error) {
           console.error('Error uploading file:', error);
-          console.error("Error message:", error.message);
-          console.error("Error name:", error.name);
-          console.error("Error code:", (error as any).code);
+          console.error("Error details:", { message: error.message, name: error.name });
           throw error;
         }
         
-        console.log('File uploaded successfully:', data);
+        console.log('File uploaded successfully, data:', data);
         
         // Get public URL
         const { data: publicUrlData } = supabase.storage
           .from(bucketName)
           .getPublicUrl(filePath);
         
-        console.log('Public URL:', publicUrlData.publicUrl);
+        console.log('Generated public URL:', publicUrlData.publicUrl);
         
         return publicUrlData.publicUrl;
       } catch (uploadError) {

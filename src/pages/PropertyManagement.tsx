@@ -165,29 +165,34 @@ const PropertyManagement = () => {
       
       console.log("Existing images from hidden input:", existingImages);
       
+      // Get files for upload from the file input
       const uploadedFiles: File[] = [];
       const fileInputs = form.querySelectorAll<HTMLInputElement>('input[type="file"]');
       
       fileInputs.forEach(input => {
-        if (input.files && input.files.length > 0) {
+        if (input && input.files && input.files.length > 0) {
           for (let i = 0; i < input.files.length; i++) {
             uploadedFiles.push(input.files[i]);
           }
         }
       });
       
-      console.log("Files to upload:", uploadedFiles.length);
+      console.log("Files to upload:", uploadedFiles.length, uploadedFiles.map(f => f.name));
       
       let allImages = [...existingImages];
       
       if (uploadedFiles.length > 0) {
         console.log("Uploading files to bucket:", STORAGE_BUCKET);
-        console.log("Files to upload:", uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
         
-        if (!bucketInitialized) {
+        // Ensure bucket exists
+        try {
           await checkStorageBucket();
+        } catch (error) {
+          console.error("Failed to check/create storage bucket:", error);
+          // Continue anyway to attempt upload
         }
         
+        // Double-check authentication
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
           throw new Error("Session expired, please log in again");
@@ -195,14 +200,14 @@ const PropertyManagement = () => {
         
         console.log("Session for upload:", sessionData.session.user.id);
         
-        let uploadedImageUrls: string[] = [];
+        // Upload the files
         try {
-          uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET);
+          const uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET);
           console.log("Upload complete. Uploaded image URLs:", uploadedImageUrls);
           
           if (uploadedImageUrls.length > 0) {
             allImages = [...allImages, ...uploadedImageUrls];
-            console.log("Combined images array:", allImages);
+            console.log("Final combined images array:", allImages);
           }
         } catch (uploadError: any) {
           console.error("Error during upload:", uploadError);
@@ -212,6 +217,7 @@ const PropertyManagement = () => {
       
       setIsUploading(false);
       
+      // Build property data for database
       const propertyData = {
         name,
         description,
@@ -228,24 +234,32 @@ const PropertyManagement = () => {
       
       let result;
       
+      // Save to database (update or insert)
       if (editingProperty) {
+        console.log("Updating existing property:", editingProperty.id);
         result = await supabase
           .from("guesthouses")
           .update(propertyData)
           .eq("id", editingProperty.id)
           .eq("owner_id", user.id);
-        
-        if (result.error) throw result.error;
-        toast.success("Logement mis à jour avec succès");
       } else {
+        console.log("Creating new property");
         result = await supabase
           .from("guesthouses")
           .insert(propertyData);
-        
-        if (result.error) throw result.error;
-        toast.success("Logement créé avec succès");
       }
       
+      // Check for errors
+      if (result.error) {
+        console.error("Database error:", result.error);
+        throw result.error;
+      }
+      
+      // Log success
+      console.log("Database operation successful:", result);
+      toast.success(editingProperty ? "Logement mis à jour avec succès" : "Logement créé avec succès");
+      
+      // Refresh the properties list
       fetchProperties();
       setEditingProperty(null);
       setDialogOpen(false);

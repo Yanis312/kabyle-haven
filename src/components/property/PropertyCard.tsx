@@ -41,7 +41,7 @@ const PropertyCard = ({
   return (
     <Card className="overflow-hidden">
       <div className="aspect-video bg-gray-100 relative">
-        {images.length > 0 ? (
+        {images && images.length > 0 ? (
           <img 
             src={images[0]} 
             alt={property.name}
@@ -87,8 +87,8 @@ const PropertyCard = ({
             </div>
           </div>
           
-          {images.length > 1 && (
-            <div className="flex gap-1 mt-2">
+          {images && images.length > 1 && (
+            <div className="flex gap-1 mt-2 overflow-x-auto">
               {images.slice(1, 4).map((img, idx) => (
                 <img 
                   key={idx} 

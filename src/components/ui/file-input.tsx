@@ -23,11 +23,12 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
     const [fileUrls, setFileUrls] = React.useState<string[]>(urls)
 
     React.useEffect(() => {
-      setFiles(selectedFiles)
+      setFiles(selectedFiles);
+      console.log("FileInput: selectedFiles updated:", selectedFiles.map(f => f.name));
     }, [selectedFiles])
 
     React.useEffect(() => {
-      setFileUrls(urls)
+      setFileUrls(urls);
       console.log("FileInput: URLs updated:", urls);
     }, [urls])
 
@@ -54,6 +55,9 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
 
     const handleRemoveFile = (fileToRemove: File) => {
       const filteredFiles = files.filter(file => file !== fileToRemove)
+      console.log("Removing file:", fileToRemove.name);
+      console.log("Files after removal:", filteredFiles.map(f => f.name));
+      
       setFiles(filteredFiles)
       if (onRemoveFile) {
         onRemoveFile(fileToRemove)
@@ -65,6 +69,8 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
     const handleRemoveUrl = (urlToRemove: string) => {
       console.log("Removing URL:", urlToRemove);
       const filteredUrls = fileUrls.filter(url => url !== urlToRemove)
+      console.log("URLs after removal:", filteredUrls);
+      
       setFileUrls(filteredUrls)
       if (onRemoveUrl) {
         onRemoveUrl(urlToRemove)
@@ -83,7 +89,10 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
                 src={url} 
                 alt={`Uploaded preview ${index}`} 
                 className="h-full w-full object-cover"
-                onError={(e) => console.error("Image failed to load:", url, e)}
+                onError={(e) => {
+                  console.error("Image failed to load:", url, e);
+                  (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Error";
+                }}
               />
               <button
                 type="button"
