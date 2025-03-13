@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
@@ -90,7 +89,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await fetchProfile(data.session.user.id);
         } else {
           setProfile(null);
-          navigate("/auth", { replace: true });
         }
       }
     };
@@ -281,43 +279,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      console.log("Signing out user...");
       
-      // Force navigate to auth page first before making the signOut request
-      navigate("/auth", { replace: true });
-      
-      // Clear all local state
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      
-      // Now perform the actual signOut with scope: 'global' to ensure ALL devices are logged out
-      const { error } = await supabase.auth.signOut({
-        scope: 'global'
-      });
+      // Perform the actual signOut first - important to do this before clearing state
+      const { error } = await supabase.auth.signOut();
       
       if (error) {
         throw error;
       }
       
+      // Now clear all local state
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
       console.log("Sign out successful");
       toast.success("Déconnexion réussie!");
       
-      // Force a reload of the page to ensure all state is cleared
-      window.location.reload();
+      // Navigate to auth page
+      navigate("/auth", { replace: true });
     } catch (error: any) {
       toast.error(`Erreur de déconnexion: ${error.message}`);
       console.error("Sign out error:", error);
-      
-      // Try to restore session if there was an error
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        if (data.session.user) {
-          await fetchProfile(data.session.user.id);
-        }
-      }
     } finally {
       setLoading(false);
     }

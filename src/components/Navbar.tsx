@@ -108,7 +108,7 @@ const Navbar = () => {
                 <DropdownMenuItem 
                   onClick={handleSignOut} 
                   className="cursor-pointer text-red-500"
-                  disabled={isSigningOut || loading}
+                  disabled={isSigningOut}
                 >
                   <LogOut className="h-4 w-4 mr-2" /> 
                   {isSigningOut ? "Déconnexion..." : "Déconnexion"}
@@ -175,7 +175,7 @@ const Navbar = () => {
                 size="sm" 
                 className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
                 onClick={handleSignOut}
-                disabled={isSigningOut || loading}
+                disabled={isSigningOut}
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 {isSigningOut ? "Déconnexion..." : "Déconnexion"}
