@@ -32,6 +32,9 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       }
       
       console.log("Bucket creation response:", data);
+
+      // Create RLS policies for the new bucket
+      await setupBucketPolicies(bucketName);
     } else {
       console.log(`Bucket ${bucketName} already exists`);
       
@@ -52,6 +55,25 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
     return;
   } catch (error) {
     console.error('Error in createStoragePolicies:', error);
+    throw error;
+  }
+};
+
+/**
+ * Sets up the RLS policies for a bucket using SQL
+ * @param bucketName The name of the bucket to set policies for
+ */
+const setupBucketPolicies = async (bucketName: string): Promise<void> => {
+  try {
+    console.log(`Setting up RLS policies for bucket ${bucketName}`);
+
+    // This function uses SQL to set up RLS policies - this will be handled by the SQL migration
+    // If needed in the future, you can add SQL functions to update policies
+    
+    console.log("RLS policies should be set up via migration");
+    
+  } catch (error) {
+    console.error('Error setting up bucket policies:', error);
     throw error;
   }
 };

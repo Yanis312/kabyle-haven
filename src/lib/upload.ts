@@ -71,7 +71,7 @@ export const uploadFiles = async (
       
       console.log('File uploaded successfully:', data);
       
-      // Get public URL
+      // Get public URL - ensure we're using the complete URL
       const { data: publicUrlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filePath);

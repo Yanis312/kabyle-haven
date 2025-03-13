@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
@@ -143,7 +142,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           } else {
             console.log("No user after tab switch, clearing profile");
             setProfile(null);
-            navigate("/auth", { replace: true });
+            // Only navigate to auth page if there's no session
+            if (!data.session) {
+              navigate("/auth", { replace: true });
+            }
           }
         } else {
           console.log("Session state unchanged after check");
@@ -169,6 +171,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       document.removeEventListener('visibilitychange', () => {});
     };
   }, [session, navigate, isSigningOut]);
+
+  // Add a more frequent session check to ensure persistence
+  useEffect(() => {
+    // Check session every 30 seconds to ensure it's still valid
+    const intervalId = setInterval(async () => {
+      if (!isSigningOut && !loading) {
+        console.log("Periodic session check...");
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            console.log("Session still valid");
+            
+            // Update session state if there's any change
+            if (JSON.stringify(session) !== JSON.stringify(data.session)) {
+              console.log("Session updated from periodic check");
+              setSession(data.session);
+              setUser(data.session.user);
+            }
+          } else if (session) {
+            console.log("Session expired, updating state");
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            navigate("/auth", { replace: true });
+          }
+        } catch (error) {
+          console.error("Error in periodic session check:", error);
+        }
+      }
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [session, isSigningOut, loading, navigate]);
 
   const fetchProfile = async (userId: string) => {
     try {

@@ -152,9 +152,21 @@ const PropertyManagement = () => {
         
         await checkStorageBucket();
         
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          throw new Error("Session expired, please log in again");
+        }
+        
         const uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET, user.id);
         console.log("Uploaded image URLs:", uploadedImageUrls);
-        allImages = [...allImages, ...uploadedImageUrls];
+        
+        const validUrls = uploadedImageUrls.filter(url => url && url.startsWith('http'));
+        if (validUrls.length !== uploadedImageUrls.length) {
+          console.error("Some URLs are invalid:", uploadedImageUrls);
+          toast.error("Certaines images n'ont pas pu être téléchargées correctement");
+        }
+        
+        allImages = [...allImages, ...validUrls];
       }
       
       setIsUploading(false);
@@ -214,11 +226,21 @@ const PropertyManagement = () => {
     try {
       setIsDeleting(true);
       
+      handleDeleteAsync(id);
+    } catch (err: any) {
+      console.error("Error deleting property:", err);
+      toast.error(`Erreur lors de la suppression: ${err.message}`);
+      setIsDeleting(false);
+    }
+  };
+  
+  async function handleDeleteAsync(id: string) {
+    try {
       const { data: property, error: getError } = await supabase
         .from("guesthouses")
         .select("images")
         .eq("id", id)
-        .eq("owner_id", user.id)
+        .eq("owner_id", user?.id || '')
         .single();
       
       if (getError) throw getError;
@@ -227,7 +249,7 @@ const PropertyManagement = () => {
         .from("guesthouses")
         .delete()
         .eq("id", id)
-        .eq("owner_id", user.id);
+        .eq("owner_id", user?.id || '');
       
       if (error) throw error;
       
@@ -239,12 +261,12 @@ const PropertyManagement = () => {
       
       fetchProperties();
     } catch (err: any) {
-      console.error("Error deleting property:", err);
+      console.error("Error in handleDeleteAsync:", err);
       toast.error(`Erreur lors de la suppression: ${err.message}`);
     } finally {
       setIsDeleting(false);
     }
-  };
+  }
   
   const handleRemoveImage = async (url: string) => {
     try {
@@ -271,7 +293,7 @@ const PropertyManagement = () => {
       toast.error(`Erreur lors de la suppression de l'image: ${err.message}`);
     }
   };
-
+  
   const handleEditProperty = (property: Property) => {
     setEditingProperty(property);
     setDialogOpen(true);
