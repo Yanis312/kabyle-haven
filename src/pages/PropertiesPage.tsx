@@ -33,7 +33,7 @@ interface Commune {
 }
 
 // Create a function to convert from the backend property format to the format expected by PropertyCard
-const mapToPropertyCardProps = (property: Property, communeName: string): Partial<FullProperty> => {
+const mapToPropertyCardProps = (property: Property, communeName: string): FullProperty => {
   return {
     id: property.id,
     title: property.name,
@@ -47,14 +47,17 @@ const mapToPropertyCardProps = (property: Property, communeName: string): Partia
     features: [`Capacité: ${property.capacity} personnes`],
     rating: property.rating || 0,
     reviewCount: 0,
-    // Adding empty values for required properties
+    // Adding required values for all properties
     host: {
       name: "",
       avatar: "",
       languages: []
     },
     amenities: [],
-    availability: [],
+    availability: {
+      startDate: "",
+      endDate: ""
+    },
     cultural_offerings: []
   };
 };
