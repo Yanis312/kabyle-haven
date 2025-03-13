@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,7 +14,6 @@ import { User, PenLine, Home, Calendar, MapPin, Star, Loader2 } from "lucide-rea
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
-// Mock data for reservations - this would be replaced by real data from Supabase
 const mockReservations = [
   {
     id: "res-1",
@@ -53,7 +51,7 @@ const mockReservations = [
 ];
 
 const UserProfile = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState<any>(null);
   const [updatingProfile, setUpdatingProfile] = useState(false);
@@ -82,21 +80,15 @@ const UserProfile = () => {
     try {
       setUpdatingProfile(true);
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: editedUser.first_name,
-          last_name: editedUser.last_name,
-          bio: editedUser.bio,
-          phone: editedUser.phone,
-          location: editedUser.location,
-        })
-        .eq('id', user.id);
-      
-      if (error) throw error;
+      await updateProfile({
+        first_name: editedUser.first_name,
+        last_name: editedUser.last_name,
+        bio: editedUser.bio,
+        phone: editedUser.phone,
+        location: editedUser.location,
+      });
       
       setIsEditing(false);
-      toast.success("Profil mis à jour avec succès");
     } catch (error: any) {
       toast.error(`Erreur lors de la mise à jour du profil: ${error.message}`);
     } finally {
@@ -116,12 +108,10 @@ const UserProfile = () => {
     setIsEditing(false);
   };
   
-  // Redirect to login if not authenticated
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
   }
   
-  // Show loading state
   if (loading || !profile || !editedUser) {
     return (
       <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-200px)]">
@@ -138,7 +128,6 @@ const UserProfile = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Profile Sidebar */}
         <div className="md:col-span-1">
           <Card>
             <CardHeader className="text-center">
@@ -192,7 +181,6 @@ const UserProfile = () => {
           </div>
         </div>
         
-        {/* Main Content */}
         <div className="md:col-span-2">
           {isEditing ? (
             <Card>
