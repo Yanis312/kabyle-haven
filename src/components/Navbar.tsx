@@ -16,9 +16,8 @@ import { toast } from "sonner";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, signOut, loading } = useAuth();
+  const { user, profile, signOut, isSigningOut } = useAuth();
   const navigate = useNavigate();
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Close mobile menu when navigating
   useEffect(() => {
@@ -29,16 +28,13 @@ const Navbar = () => {
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isSigningOut) return; // Prevent multiple clicks
+    e.stopPropagation();
     
     try {
-      setIsSigningOut(true);
       await signOut();
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Erreur lors de la déconnexion. Veuillez réessayer.");
-    } finally {
-      setIsSigningOut(false);
     }
   };
 

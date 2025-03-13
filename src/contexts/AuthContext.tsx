@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +14,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   updateProfile: (profileData: Partial<ProfileData>) => Promise<void>;
   loading: boolean;
+  isSigningOut: boolean;
 };
 
 type ProfileData = {
@@ -32,6 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,6 +92,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await fetchProfile(data.session.user.id);
         } else {
           setProfile(null);
+          // Redirect to auth page if session is gone
+          navigate("/auth", { replace: true });
         }
       }
     };
@@ -277,31 +282,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (isSigningOut) return; // Prevent multiple sign-out attempts
+    
     try {
-      setLoading(true);
+      setIsSigningOut(true);
       
-      // Perform the actual signOut first - important to do this before clearing state
-      const { error } = await supabase.auth.signOut();
+      // Force clear state immediately
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
+      // Sign out all sessions
+      const { error } = await supabase.auth.signOut({
+        scope: 'global'
+      });
       
       if (error) {
         throw error;
       }
-      
-      // Now clear all local state
-      setSession(null);
-      setUser(null);
-      setProfile(null);
       
       console.log("Sign out successful");
       toast.success("Déconnexion réussie!");
       
       // Navigate to auth page
       navigate("/auth", { replace: true });
+      
+      // Force reload as last resort to clear any lingering state
+      window.location.reload();
     } catch (error: any) {
       toast.error(`Erreur de déconnexion: ${error.message}`);
       console.error("Sign out error:", error);
+      
+      // Try to restore session if there was an error during signout
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      
+      if (data.session?.user) {
+        await fetchProfile(data.session.user.id);
+      }
     } finally {
       setLoading(false);
+      setIsSigningOut(false);
     }
   };
 
@@ -316,6 +338,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signOut,
         updateProfile,
         loading,
+        isSigningOut,
       }}
     >
       {children}
