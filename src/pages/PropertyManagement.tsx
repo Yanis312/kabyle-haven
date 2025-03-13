@@ -164,7 +164,7 @@ const PropertyManagement = () => {
       console.log("Existing images from hidden input:", existingImages);
       
       const uploadedFiles: File[] = [];
-      const fileInputs = form.querySelectorAll('input[type="file"]');
+      const fileInputs = form.querySelectorAll<HTMLInputElement>('input[type="file"]');
       
       fileInputs.forEach(input => {
         if (input.files && input.files.length > 0) {
