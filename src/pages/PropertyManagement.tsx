@@ -103,7 +103,6 @@ const PropertyManagement = () => {
     }
     
     const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
     
     const name = form.querySelector<HTMLInputElement>('#property-name')?.value;
     const description = form.querySelector<HTMLTextAreaElement>('#property-description')?.value || '';
@@ -134,16 +133,12 @@ const PropertyManagement = () => {
       setIsSubmitting(true);
       setIsUploading(true);
       
-      const uploadedFilesElements = document.querySelectorAll('img[src^="blob:"]');
+      const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
       const uploadedFiles: File[] = [];
       
-      const fileInputs = document.querySelectorAll('input[type="file"]');
-      if (fileInputs && fileInputs.length > 0) {
-        const fileInput = fileInputs[0];
-        if (fileInput.files && fileInput.files.length > 0) {
-          for (let i = 0; i < fileInput.files.length; i++) {
-            uploadedFiles.push(fileInput.files[i]);
-          }
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+          uploadedFiles.push(fileInput.files[i]);
         }
       }
       
