@@ -7,6 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const createStoragePolicies = async (bucketName: string): Promise<void> => {
   try {
+    // Get the current session to check authentication
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    console.log("Current session:", sessionData?.session ? "User authenticated" : "No session", sessionError);
+    
     // First check if bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
@@ -15,23 +19,36 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       throw bucketsError;
     }
     
+    console.log("All buckets:", buckets);
     const bucketExists = buckets.some(b => b.name === bucketName);
     console.log("Bucket exists?", bucketExists);
     
     if (!bucketExists) {
       console.log("Attempting to create bucket:", bucketName);
+      console.log("User role:", sessionData?.session?.user?.user_metadata?.role);
+      console.log("User id:", sessionData?.session?.user?.id);
       
-      const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB limit
-      });
-      
-      if (createError) {
-        console.error("Error creating bucket:", createError);
-        throw createError;
+      // Add detailed error handling with a try/catch block
+      try {
+        const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 10485760, // 10MB limit
+        });
+        
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          console.error("Error message:", createError.message);
+          console.error("Error details:", createError.details);
+          console.error("Error status:", createError.status);
+          console.error("Error code:", (createError as any).code);
+          throw createError;
+        }
+        
+        console.log("Bucket creation response:", data);
+      } catch (createCatchError) {
+        console.error("Caught exception creating bucket:", createCatchError);
+        throw createCatchError;
       }
-      
-      console.log("Bucket creation response:", data);
 
       // Create RLS policies for the new bucket
       await setupBucketPolicies(bucketName);
@@ -66,7 +83,7 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
 const setupBucketPolicies = async (bucketName: string): Promise<void> => {
   try {
     console.log(`Setting up RLS policies for bucket ${bucketName}`);
-
+    
     // This function uses SQL to set up RLS policies - this will be handled by the SQL migration
     // If needed in the future, you can add SQL functions to update policies
     

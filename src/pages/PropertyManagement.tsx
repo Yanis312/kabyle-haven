@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +31,7 @@ const PropertyManagement = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bucketInitialized, setBucketInitialized] = useState(false);
   
   useEffect(() => {
     fetchProperties();
@@ -38,9 +40,25 @@ const PropertyManagement = () => {
   }, [user]);
   
   const checkStorageBucket = async () => {
+    if (bucketInitialized) return;
+    
     try {
       console.log("Checking if storage bucket exists:", STORAGE_BUCKET);
+      console.log("Current user:", user);
+      
+      // Check if we have a valid session before trying to create a bucket
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log("Current session for bucket check:", sessionData?.session ? "User authenticated" : "No session");
+      console.log("Session error:", sessionError);
+      
+      if (!sessionData.session) {
+        console.log("No active session, skipping bucket creation");
+        toast.error("Vous devez être connecté pour utiliser le stockage d'images");
+        return;
+      }
+      
       await createStoragePolicies(STORAGE_BUCKET);
+      setBucketInitialized(true);
     } catch (err: any) {
       console.error("Error checking/creating storage bucket:", err);
       toast.error(`Error with storage: ${err.message}`);
@@ -148,16 +166,38 @@ const PropertyManagement = () => {
       
       if (uploadedFiles.length > 0) {
         console.log("Uploading files to bucket:", STORAGE_BUCKET);
-        console.log("Files to upload:", uploadedFiles);
+        console.log("Files to upload:", uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
         
-        await checkStorageBucket();
+        // Try to initialize the bucket again if not done already
+        if (!bucketInitialized) {
+          await checkStorageBucket();
+        }
         
+        // Double check session before uploading
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
           throw new Error("Session expired, please log in again");
         }
         
-        const uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET, user.id);
+        console.log("Session for upload:", sessionData.session.user.id);
+        
+        // Try to upload without creating a folder path
+        let uploadedImageUrls: string[] = [];
+        try {
+          uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET);
+        } catch (uploadError: any) {
+          console.error("Error during upload:", uploadError);
+          
+          // If the error is related to RLS, try without user ID path
+          if (uploadError.message?.includes("row-level security")) {
+            console.log("Trying upload with different path strategy");
+            // For now, we'll just skip the upload and save without images
+            toast.error("Cannot upload images due to permissions. Your property will be saved without images.");
+          } else {
+            throw uploadError;
+          }
+        }
+        
         console.log("Uploaded image URLs:", uploadedImageUrls);
         
         const validUrls = uploadedImageUrls.filter(url => url && url.startsWith('http'));

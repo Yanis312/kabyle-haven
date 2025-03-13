@@ -19,6 +19,12 @@ export const uploadFiles = async (
   try {
     console.log(`Starting upload of ${files.length} files to bucket: ${bucketName}`);
     
+    // Check authentication status
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    console.log("Authentication status:", sessionData?.session ? "Authenticated" : "Not authenticated");
+    console.log("User ID:", sessionData?.session?.user?.id);
+    console.log("Session error:", sessionError);
+    
     // Check if bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
@@ -26,6 +32,8 @@ export const uploadFiles = async (
       console.error('Error checking buckets:', bucketsError);
       throw bucketsError;
     }
+
+    console.log("Available buckets:", buckets);
     
     if (!buckets.some(b => b.name === bucketName)) {
       console.error(`Bucket ${bucketName} does not exist!`);
@@ -38,10 +46,22 @@ export const uploadFiles = async (
       
       if (createError) {
         console.error('Error creating bucket:', createError);
+        console.error("Error details:", createError.details);
+        console.error("Error status:", createError.status);
         throw createError;
       }
       
       console.log('Bucket created successfully:', newBucket);
+    }
+    
+    // Check bucket permissions
+    console.log(`Checking bucket ${bucketName} permissions...`);
+    try {
+      const { data: listData, error: listError } = await supabase.storage.from(bucketName).list();
+      console.log(`List result for ${bucketName}:`, listData);
+      console.log(`List error for ${bucketName}:`, listError);
+    } catch (listCatchError) {
+      console.error(`Error listing files in bucket ${bucketName}:`, listCatchError);
     }
     
     const uploadPromises = files.map(async (file) => {
@@ -51,34 +71,45 @@ export const uploadFiles = async (
       const filePath = path ? `${path}/${fileName}` : fileName;
       
       console.log(`Uploading file: ${file.name} as ${filePath}`);
+      console.log(`File size: ${file.size} bytes, type: ${file.type}`);
       
       // Upload file with improved error handling
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (error) {
-        console.error('Error uploading file:', error);
-        // Provide more specific error feedback based on error type
-        if (error.message.includes("row-level security")) {
-          throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
+      try {
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (error) {
+          console.error('Error uploading file:', error);
+          console.error("Error message:", error.message);
+          console.error("Error details:", error.details);
+          console.error("Error status:", error.status);
+          console.error("Error code:", (error as any).code);
+          
+          // Provide more specific error feedback based on error type
+          if (error.message.includes("row-level security")) {
+            throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
+          }
+          throw error;
         }
-        throw error;
+        
+        console.log('File uploaded successfully:', data);
+        
+        // Get public URL - ensure we're using the complete URL
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        
+        console.log('Public URL:', publicUrlData.publicUrl);
+        
+        return publicUrlData.publicUrl;
+      } catch (uploadError) {
+        console.error("Caught upload error:", uploadError);
+        throw uploadError;
       }
-      
-      console.log('File uploaded successfully:', data);
-      
-      // Get public URL - ensure we're using the complete URL
-      const { data: publicUrlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(filePath);
-      
-      console.log('Public URL:', publicUrlData.publicUrl);
-      
-      return publicUrlData.publicUrl;
     });
     
     // Wait for all uploads to complete
@@ -105,6 +136,11 @@ export const removeFiles = async (
   try {
     console.log(`Removing ${urls.length} files from bucket: ${bucketName}`);
     
+    // Check authentication status
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log("Authentication status for delete:", sessionData?.session ? "Authenticated" : "Not authenticated");
+    console.log("User ID for delete:", sessionData?.session?.user?.id);
+    
     // Extract file paths from public URLs
     const filePaths = urls.map(url => {
       const urlObj = new URL(url);
@@ -126,6 +162,8 @@ export const removeFiles = async (
     
     if (error) {
       console.error('Error removing files:', error);
+      console.error("Error message:", error.message);
+      console.error("Error details:", error.details);
       // Provide more specific error feedback
       if (error.message.includes("row-level security")) {
         throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);
