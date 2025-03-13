@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { FileInput } from "@/components/ui/file-input";
 import { uploadFiles, removeFiles } from "@/lib/upload";
+import { createStoragePolicies } from "@/lib/supabase";
 
 interface Property {
   id: string;
@@ -128,6 +130,8 @@ const PropertyManagement = () => {
         
         console.log("Bucket creation response:", data);
         
+        // Remove this RPC call as we're now managing policies via SQL migrations
+        /*
         const { error: policyError } = await supabase.rpc('create_storage_policy', {
           bucket_name: STORAGE_BUCKET
         });
@@ -137,6 +141,10 @@ const PropertyManagement = () => {
         } else {
           console.log("Storage policy created successfully");
         }
+        */
+        
+        // Use our utility function instead
+        await createStoragePolicies(STORAGE_BUCKET);
         
         console.log(`Storage bucket '${STORAGE_BUCKET}' created successfully`);
       }

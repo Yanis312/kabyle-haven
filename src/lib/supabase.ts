@@ -29,12 +29,8 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       }
     }
     
-    // Now we'll call our custom RPC function to set policies
-    console.log(`Setting policies for bucket: ${bucketName}`);
-    
-    // Currently, we'll just return as Supabase doesn't allow direct policy creation from the client
-    // The bucket being public should be sufficient for now
-    console.log(`Bucket ${bucketName} is set to public access`);
+    // Now the bucket should exist and have the proper policies from our SQL migration
+    console.log(`Bucket ${bucketName} exists and should have the proper policies`);
     
     return;
   } catch (error) {
