@@ -1,12 +1,21 @@
 
-import { Search, User, Menu } from "lucide-react";
+import { Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, profile, signOut } = useAuth();
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b">
@@ -29,12 +38,18 @@ const Navbar = () => {
           <Link to="/properties" className="font-medium hover:text-kabyle-terracotta transition-colors">
             Logements
           </Link>
-          <Link to="/culture" className="font-medium hover:text-kabyle-terracotta transition-colors">
-            Culture
+          <Link to="/regions" className="font-medium hover:text-kabyle-terracotta transition-colors">
+            Régions
           </Link>
-          <Link to="/host" className="font-medium hover:text-kabyle-terracotta transition-colors">
-            Héberger
-          </Link>
+          {profile?.role === "proprietaire" ? (
+            <Link to="/host" className="font-medium hover:text-kabyle-terracotta transition-colors">
+              Mes logements
+            </Link>
+          ) : (
+            <Link to="/host" className="font-medium hover:text-kabyle-terracotta transition-colors">
+              Devenir hôte
+            </Link>
+          )}
         </div>
 
         {/* User Actions */}
@@ -43,9 +58,41 @@ const Navbar = () => {
             <Search className="h-4 w-4 mr-2" />
             Rechercher
           </Button>
-          <Button variant="ghost" size="sm" className="rounded-full">
-            <User className="h-4 w-4" />
-          </Button>
+          
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="rounded-full">
+                  <User className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer">
+                    Mon profil
+                  </Link>
+                </DropdownMenuItem>
+                {profile?.role === "proprietaire" && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/host" className="cursor-pointer">
+                      Gérer mes logements
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-500">
+                  <LogOut className="h-4 w-4 mr-2" /> Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="ghost" size="sm" asChild className="rounded-full">
+              <Link to="/auth">
+                <User className="h-4 w-4 mr-2" />
+                Connexion
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -62,7 +109,7 @@ const Navbar = () => {
       {/* Mobile Menu */}
       <div className={cn(
         "md:hidden absolute w-full bg-white shadow-md transition-all duration-300 ease-in-out",
-        isMenuOpen ? "max-h-64 border-b" : "max-h-0 overflow-hidden"
+        isMenuOpen ? "max-h-screen border-b" : "max-h-0 overflow-hidden"
       )}>
         <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
           <Link to="/" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
@@ -71,16 +118,46 @@ const Navbar = () => {
           <Link to="/properties" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
             Logements
           </Link>
-          <Link to="/culture" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-            Culture
+          <Link to="/regions" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+            Régions
           </Link>
-          <Link to="/host" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-            Héberger
-          </Link>
+          {profile?.role === "proprietaire" ? (
+            <Link to="/host" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+              Mes logements
+            </Link>
+          ) : (
+            <Link to="/host" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+              Devenir hôte
+            </Link>
+          )}
           <Button variant="outline" size="sm" className="w-full justify-start rounded-full">
             <Search className="h-4 w-4 mr-2" />
             Rechercher
           </Button>
+          
+          {user ? (
+            <>
+              <Link to="/profile" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+                Mon profil
+              </Link>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={signOut}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Déconnexion
+              </Button>
+            </>
+          ) : (
+            <Link to="/auth">
+              <Button variant="default" size="sm" className="w-full justify-start">
+                <User className="h-4 w-4 mr-2" />
+                Connexion / Inscription
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>

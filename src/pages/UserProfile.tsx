@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Navigate, Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,20 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { User, PenLine, Home, Calendar, MapPin, Star } from "lucide-react";
+import { User, PenLine, Home, Calendar, MapPin, Star, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data for the user profile
-const mockUser = {
-  id: "user-1",
-  name: "Amar Meziane",
-  email: "amar.meziane@example.com",
-  avatar: "",
-  bio: "Passionné de culture kabyle et de voyages. J'aime découvrir de nouveaux endroits en Kabylie et partager mes expériences.",
-  phone: "+213 555 123 456",
-  location: "Tizi Ouzou, Kabylie"
-};
-
-// Mock data for reservations
+// Mock data for reservations - this would be replaced by real data from Supabase
 const mockReservations = [
   {
     id: "res-1",
@@ -62,25 +53,87 @@ const mockReservations = [
 ];
 
 const UserProfile = () => {
-  const [user, setUser] = useState(mockUser);
+  const { user, profile, loading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedUser, setEditedUser] = useState(user);
+  const [editedUser, setEditedUser] = useState<any>(null);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  
+  useEffect(() => {
+    if (profile) {
+      setEditedUser({
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        bio: profile.bio || '',
+        phone: profile.phone || '',
+        location: profile.location || '',
+      });
+    }
+  }, [profile]);
   
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('fr-FR', options);
   };
   
-  const handleSaveProfile = () => {
-    setUser(editedUser);
-    setIsEditing(false);
-    toast.success("Profil mis à jour avec succès");
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    try {
+      setUpdatingProfile(true);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: editedUser.first_name,
+          last_name: editedUser.last_name,
+          bio: editedUser.bio,
+          phone: editedUser.phone,
+          location: editedUser.location,
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setIsEditing(false);
+      toast.success("Profil mis à jour avec succès");
+    } catch (error: any) {
+      toast.error(`Erreur lors de la mise à jour du profil: ${error.message}`);
+    } finally {
+      setUpdatingProfile(false);
+    }
   };
   
   const handleCancelEdit = () => {
-    setEditedUser(user);
+    setEditedUser({
+      first_name: profile?.first_name || '',
+      last_name: profile?.last_name || '',
+      email: profile?.email || '',
+      bio: profile?.bio || '',
+      phone: profile?.phone || '',
+      location: profile?.location || '',
+    });
     setIsEditing(false);
   };
+  
+  // Redirect to login if not authenticated
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  // Show loading state
+  if (loading || !profile || !editedUser) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 animate-spin text-kabyle-blue mb-4" />
+          <p className="text-lg">Chargement du profil...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Utilisateur';
   
   return (
     <div className="container mx-auto px-4 py-12">
@@ -90,28 +143,31 @@ const UserProfile = () => {
           <Card>
             <CardHeader className="text-center">
               <Avatar className="w-24 h-24 mx-auto mb-4">
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage src={profile.avatar_url} alt={fullName} />
                 <AvatarFallback className="bg-kabyle-blue text-white text-2xl">
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {fullName.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
-              <CardTitle>{user.name}</CardTitle>
+              <CardTitle>{fullName}</CardTitle>
               <CardDescription className="flex justify-center items-center gap-2">
-                <MapPin className="h-4 w-4 text-kabyle-terracotta" /> {user.location}
+                <MapPin className="h-4 w-4 text-kabyle-terracotta" /> {profile.location || 'Aucune localisation'}
+              </CardDescription>
+              <CardDescription className="mt-1 text-sm px-4 py-1 rounded-full bg-gray-100 inline-block">
+                {profile.role === 'proprietaire' ? 'Propriétaire' : 'Client'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500">Bio</p>
-                <p className="text-sm">{user.bio}</p>
+                <p className="text-sm">{profile.bio || 'Aucune biographie'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Email</p>
-                <p className="text-sm">{user.email}</p>
+                <p className="text-sm">{profile.email}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Téléphone</p>
-                <p className="text-sm">{user.phone}</p>
+                <p className="text-sm">{profile.phone || 'Aucun numéro'}</p>
               </div>
             </CardContent>
             <CardFooter className="flex justify-center">
@@ -126,11 +182,13 @@ const UserProfile = () => {
           </Card>
           
           <div className="mt-6">
-            <Link to="/host">
-              <Button className="w-full bg-kabyle-terracotta hover:bg-kabyle-terracotta/90">
-                <Home className="mr-2 h-4 w-4" /> Devenir hôte
-              </Button>
-            </Link>
+            {profile.role !== 'proprietaire' && (
+              <Link to="/host">
+                <Button className="w-full bg-kabyle-terracotta hover:bg-kabyle-terracotta/90">
+                  <Home className="mr-2 h-4 w-4" /> Devenir hôte
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
         
@@ -145,20 +203,19 @@ const UserProfile = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nom complet</Label>
+                    <Label htmlFor="first_name">Prénom</Label>
                     <Input 
-                      id="name" 
-                      value={editedUser.name}
-                      onChange={(e) => setEditedUser({...editedUser, name: e.target.value})}
+                      id="first_name" 
+                      value={editedUser.first_name}
+                      onChange={(e) => setEditedUser({...editedUser, first_name: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="last_name">Nom</Label>
                     <Input 
-                      id="email" 
-                      type="email" 
-                      value={editedUser.email}
-                      onChange={(e) => setEditedUser({...editedUser, email: e.target.value})}
+                      id="last_name" 
+                      value={editedUser.last_name}
+                      onChange={(e) => setEditedUser({...editedUser, last_name: e.target.value})}
                     />
                   </div>
                 </div>
@@ -198,8 +255,26 @@ const UserProfile = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleCancelEdit}>Annuler</Button>
-                <Button onClick={handleSaveProfile}>Enregistrer</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleCancelEdit}
+                  disabled={updatingProfile}
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleSaveProfile}
+                  disabled={updatingProfile}
+                >
+                  {updatingProfile ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    'Enregistrer'
+                  )}
+                </Button>
               </CardFooter>
             </Card>
           ) : (
