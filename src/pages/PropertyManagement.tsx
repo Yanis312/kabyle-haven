@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +48,6 @@ const PropertyManagement = () => {
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
   
-  // Form states
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -64,14 +62,12 @@ const PropertyManagement = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  // Load properties on mount
   useEffect(() => {
     fetchProperties();
     fetchWilayasAndCommunes();
     checkStorageBucket();
   }, [user]);
   
-  // Filter communes when wilaya changes
   useEffect(() => {
     if (selectedWilaya) {
       const filtered = communes.filter(commune => 
@@ -82,7 +78,6 @@ const PropertyManagement = () => {
     }
   }, [selectedWilaya, communes]);
   
-  // Set form values when editing
   useEffect(() => {
     if (editingProperty) {
       setName(editingProperty.name);
@@ -105,25 +100,49 @@ const PropertyManagement = () => {
   
   const checkStorageBucket = async () => {
     try {
-      // Check if the bucket exists
+      console.log("Checking if storage bucket exists:", STORAGE_BUCKET);
+      
       const { data: buckets, error } = await supabase.storage.listBuckets();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error listing buckets:", error);
+        throw error;
+      }
+      
+      console.log("Available buckets:", buckets);
       
       const bucketExists = buckets.some(bucket => bucket.name === STORAGE_BUCKET);
+      console.log("Bucket exists?", bucketExists);
       
       if (!bucketExists) {
-        // Create the bucket if it doesn't exist
-        const { error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+        console.log("Attempting to create bucket:", STORAGE_BUCKET);
+        
+        const { data, error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
           public: true,
         });
         
-        if (createError) throw createError;
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          throw createError;
+        }
+        
+        console.log("Bucket creation response:", data);
+        
+        const { error: policyError } = await supabase.rpc('create_storage_policy', {
+          bucket_name: STORAGE_BUCKET
+        });
+        
+        if (policyError) {
+          console.error("Error setting bucket policy:", policyError);
+        } else {
+          console.log("Storage policy created successfully");
+        }
         
         console.log(`Storage bucket '${STORAGE_BUCKET}' created successfully`);
       }
     } catch (err: any) {
       console.error("Error checking/creating storage bucket:", err);
+      toast.error(`Error with storage: ${err.message}`);
     }
   };
   
@@ -152,7 +171,6 @@ const PropertyManagement = () => {
   
   const fetchWilayasAndCommunes = async () => {
     try {
-      // Fetch wilayas
       const { data: wilayaData, error: wilayaError } = await supabase
         .from("wilayas")
         .select("*")
@@ -161,7 +179,6 @@ const PropertyManagement = () => {
       if (wilayaError) throw wilayaError;
       setWilayas(wilayaData || []);
       
-      // Fetch communes
       const { data: communeData, error: communeError } = await supabase
         .from("communes")
         .select("*")
@@ -192,11 +209,16 @@ const PropertyManagement = () => {
       setIsSubmitting(true);
       setIsUploading(true);
       
-      // Upload new images if any
       let allImages = [...existingImages];
       
       if (uploadedFiles.length > 0) {
+        console.log("Uploading files to bucket:", STORAGE_BUCKET);
+        console.log("Files to upload:", uploadedFiles);
+        
+        await checkStorageBucket();
+        
         const uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET, user.id);
+        console.log("Uploaded image URLs:", uploadedImageUrls);
         allImages = [...allImages, ...uploadedImageUrls];
       }
       
@@ -216,7 +238,6 @@ const PropertyManagement = () => {
       let result;
       
       if (editingProperty) {
-        // Update existing property
         result = await supabase
           .from("guesthouses")
           .update(propertyData)
@@ -226,7 +247,6 @@ const PropertyManagement = () => {
         if (result.error) throw result.error;
         toast.success("Logement mis à jour avec succès");
       } else {
-        // Create new property
         result = await supabase
           .from("guesthouses")
           .insert(propertyData);
@@ -235,7 +255,6 @@ const PropertyManagement = () => {
         toast.success("Logement créé avec succès");
       }
       
-      // Refresh properties list
       fetchProperties();
       resetForm();
       setDialogOpen(false);
@@ -258,7 +277,6 @@ const PropertyManagement = () => {
     try {
       setIsDeleting(true);
       
-      // First, get the property to access its images
       const { data: property, error: getError } = await supabase
         .from("guesthouses")
         .select("images")
@@ -268,7 +286,6 @@ const PropertyManagement = () => {
       
       if (getError) throw getError;
       
-      // Delete the property
       const { error } = await supabase
         .from("guesthouses")
         .delete()
@@ -277,14 +294,12 @@ const PropertyManagement = () => {
       
       if (error) throw error;
       
-      // Delete associated images if any
       if (property && property.images && property.images.length > 0) {
         await removeFiles(property.images, STORAGE_BUCKET);
       }
       
       toast.success("Logement supprimé avec succès");
       
-      // Refresh properties list
       fetchProperties();
     } catch (err: any) {
       console.error("Error deleting property:", err);
@@ -296,11 +311,9 @@ const PropertyManagement = () => {
   
   const handleRemoveImage = async (url: string) => {
     try {
-      // Remove from existing images
       const updatedImages = existingImages.filter(img => img !== url);
       setExistingImages(updatedImages);
       
-      // If editing, update the property in the database
       if (editingProperty) {
         const { error } = await supabase
           .from("guesthouses")
@@ -311,9 +324,7 @@ const PropertyManagement = () => {
         if (error) throw error;
       }
       
-      // Remove from storage
       await removeFiles([url], STORAGE_BUCKET);
-      
     } catch (err: any) {
       console.error("Error removing image:", err);
       toast.error(`Erreur lors de la suppression de l'image: ${err.message}`);
@@ -515,7 +526,130 @@ const PropertyManagement = () => {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
-                {/* Same form as above - duplicate is handled by React */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="property-name">Nom du logement *</Label>
+                      <Input
+                        id="property-name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Maison traditionnelle, Villa moderne, etc."
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="property-description">Description</Label>
+                      <Textarea
+                        id="property-description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Décrivez votre logement..."
+                        rows={4}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="property-price">Prix par nuit (DA) *</Label>
+                        <Input
+                          id="property-price"
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder="5000"
+                          min="0"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="property-capacity">Capacité (personnes) *</Label>
+                        <Input
+                          id="property-capacity"
+                          type="number"
+                          value={capacity}
+                          onChange={(e) => setCapacity(e.target.value)}
+                          placeholder="4"
+                          min="1"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="property-wilaya">Wilaya *</Label>
+                        <Select
+                          value={selectedWilaya}
+                          onValueChange={setSelectedWilaya}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une wilaya" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {wilayas.map((wilaya) => (
+                              <SelectItem key={wilaya.id} value={wilaya.id.toString()}>
+                                {wilaya.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="property-commune">Commune *</Label>
+                        <Select
+                          value={selectedCommune}
+                          onValueChange={setSelectedCommune}
+                          disabled={!selectedWilaya}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une commune" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filteredCommunes.map((commune) => (
+                              <SelectItem key={commune.id} value={commune.id.toString()}>
+                                {commune.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Images</Label>
+                      <FileInput 
+                        onFilesChange={setUploadedFiles}
+                        selectedFiles={uploadedFiles}
+                        urls={existingImages}
+                        onRemoveUrl={handleRemoveImage}
+                        maxFiles={5}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end gap-2 pt-4">
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">Annuler</Button>
+                    </DialogClose>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting || isUploading}
+                    >
+                      {isSubmitting || isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {isUploading ? "Téléchargement des images..." : (editingProperty ? "Mise à jour..." : "Création...")}
+                        </>
+                      ) : (
+                        editingProperty ? "Mettre à jour" : "Créer"
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </DialogContent>
             </Dialog>
           </div>

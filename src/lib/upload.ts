@@ -17,11 +17,40 @@ export const uploadFiles = async (
   if (!files.length) return [];
   
   try {
+    console.log(`Starting upload of ${files.length} files to bucket: ${bucketName}`);
+    
+    // Check if bucket exists
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    
+    if (bucketsError) {
+      console.error('Error checking buckets:', bucketsError);
+      throw bucketsError;
+    }
+    
+    if (!buckets.some(b => b.name === bucketName)) {
+      console.error(`Bucket ${bucketName} does not exist!`);
+      
+      // Try to create the bucket
+      console.log(`Attempting to create bucket: ${bucketName}`);
+      const { data: newBucket, error: createError } = await supabase.storage.createBucket(bucketName, {
+        public: true,
+      });
+      
+      if (createError) {
+        console.error('Error creating bucket:', createError);
+        throw createError;
+      }
+      
+      console.log('Bucket created successfully:', newBucket);
+    }
+    
     const uploadPromises = files.map(async (file) => {
       // Create a unique file name to prevent collisions
       const fileExt = file.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = path ? `${path}/${fileName}` : fileName;
+      
+      console.log(`Uploading file: ${file.name} as ${filePath}`);
       
       // Upload file
       const { data, error } = await supabase.storage
@@ -36,10 +65,14 @@ export const uploadFiles = async (
         throw error;
       }
       
+      console.log('File uploaded successfully:', data);
+      
       // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filePath);
+      
+      console.log('Public URL:', publicUrlData.publicUrl);
       
       return publicUrlData.publicUrl;
     });
@@ -66,6 +99,8 @@ export const removeFiles = async (
   if (!urls.length) return [];
   
   try {
+    console.log(`Removing ${urls.length} files from bucket: ${bucketName}`);
+    
     // Extract file paths from public URLs
     const filePaths = urls.map(url => {
       const urlObj = new URL(url);
@@ -78,6 +113,8 @@ export const removeFiles = async (
       return '';
     }).filter(Boolean);
     
+    console.log('File paths to remove:', filePaths);
+    
     // Remove files
     const { data, error } = await supabase.storage
       .from(bucketName)
@@ -87,6 +124,8 @@ export const removeFiles = async (
       console.error('Error removing files:', error);
       throw error;
     }
+    
+    console.log('Files removed successfully:', data);
     
     return data?.map(d => d.name) || [];
     
