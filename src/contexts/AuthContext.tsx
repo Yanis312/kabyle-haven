@@ -283,15 +283,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       console.log("Signing out user...");
       
-      // Important: Clear all local state first before making the signOut request
-      // This ensures UI updates immediately, even if the request takes time
+      // Force navigate to auth page first before making the signOut request
+      navigate("/auth", { replace: true });
+      
+      // Clear all local state
       setSession(null);
       setUser(null);
       setProfile(null);
       
-      // Now perform the actual signOut
+      // Now perform the actual signOut with scope: 'global' to ensure ALL devices are logged out
       const { error } = await supabase.auth.signOut({
-        scope: 'global' // This ensures ALL devices are logged out
+        scope: 'global'
       });
       
       if (error) {
@@ -299,18 +301,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       console.log("Sign out successful");
-      
-      // Force navigate to auth page
-      navigate("/auth", { replace: true });
       toast.success("Déconnexion réussie!");
-    } catch (error: any) {
-      // Restore session if there was an error
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
       
+      // Force a reload of the page to ensure all state is cleared
+      window.location.reload();
+    } catch (error: any) {
       toast.error(`Erreur de déconnexion: ${error.message}`);
       console.error("Sign out error:", error);
+      
+      // Try to restore session if there was an error
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        if (data.session.user) {
+          await fetchProfile(data.session.user.id);
+        }
+      }
     } finally {
       setLoading(false);
     }

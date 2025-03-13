@@ -12,11 +12,13 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Close mobile menu when navigating
   useEffect(() => {
@@ -27,10 +29,16 @@ const Navbar = () => {
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isSigningOut) return; // Prevent multiple clicks
+    
     try {
+      setIsSigningOut(true);
       await signOut();
     } catch (error) {
       console.error("Error signing out:", error);
+      toast.error("Erreur lors de la déconnexion. Veuillez réessayer.");
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -100,10 +108,10 @@ const Navbar = () => {
                 <DropdownMenuItem 
                   onClick={handleSignOut} 
                   className="cursor-pointer text-red-500"
-                  disabled={loading}
+                  disabled={isSigningOut || loading}
                 >
                   <LogOut className="h-4 w-4 mr-2" /> 
-                  {loading ? "Déconnexion..." : "Déconnexion"}
+                  {isSigningOut ? "Déconnexion..." : "Déconnexion"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -167,10 +175,10 @@ const Navbar = () => {
                 size="sm" 
                 className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
                 onClick={handleSignOut}
-                disabled={loading}
+                disabled={isSigningOut || loading}
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                {loading ? "Déconnexion..." : "Déconnexion"}
+                {isSigningOut ? "Déconnexion..." : "Déconnexion"}
               </Button>
             </>
           ) : (
