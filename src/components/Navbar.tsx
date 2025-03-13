@@ -1,5 +1,5 @@
 
-import { Search, User, Menu, LogOut } from "lucide-react";
+import { Search, User, Menu, LogOut, Plus, Heart, MapPin, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -70,14 +70,16 @@ const Navbar = () => {
           <Link to="/" className="font-medium hover:text-kabyle-terracotta transition-colors">
             Accueil
           </Link>
-          <Link to="/properties" className="font-medium hover:text-kabyle-terracotta transition-colors">
-            Logements
+          <Link to="/wilaya" className="font-medium hover:text-kabyle-terracotta transition-colors">
+            <MapPin className="h-4 w-4 inline mr-1" />
+            Wilayas
           </Link>
           <Link to="/regions" className="font-medium hover:text-kabyle-terracotta transition-colors">
             Régions
           </Link>
           {profile?.role === "proprietaire" ? (
-            <Link to="/host" className="font-medium hover:text-kabyle-terracotta transition-colors">
+            <Link to="/property-management" className="font-medium hover:text-kabyle-terracotta transition-colors">
+              <Home className="h-4 w-4 inline mr-1" />
               Mes logements
             </Link>
           ) : (
@@ -107,13 +109,29 @@ const Navbar = () => {
                     Mon profil
                   </Link>
                 </DropdownMenuItem>
-                {profile?.role === "proprietaire" && (
+                
+                {profile?.role === "proprietaire" ? (
+                  <DropdownMenuItem asChild>
+                    <Link to="/property-management" className="cursor-pointer">
+                      <Home className="h-4 w-4 mr-2" /> Gérer mes logements
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
                   <DropdownMenuItem asChild>
                     <Link to="/host" className="cursor-pointer">
-                      Gérer mes logements
+                      Devenir hôte
                     </Link>
                   </DropdownMenuItem>
                 )}
+                
+                {profile?.role === "client" && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/favorites" className="cursor-pointer">
+                      <Heart className="h-4 w-4 mr-2" /> Mes favoris
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={handleSignOut} 
@@ -155,21 +173,35 @@ const Navbar = () => {
           <Link to="/" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
             Accueil
           </Link>
-          <Link to="/properties" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-            Logements
+          <Link to="/wilaya" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+            <MapPin className="h-4 w-4 inline mr-1" />
+            Wilayas
           </Link>
           <Link to="/regions" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
             Régions
           </Link>
+          
           {profile?.role === "proprietaire" ? (
-            <Link to="/host" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-              Mes logements
-            </Link>
+            <>
+              <Link to="/property-management" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+                <Home className="h-4 w-4 inline mr-1" /> Mes logements
+              </Link>
+              <Link to="/property-management" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+                <Plus className="h-4 w-4 inline mr-1" /> Ajouter un logement
+              </Link>
+            </>
           ) : (
             <Link to="/host" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
               Devenir hôte
             </Link>
           )}
+          
+          {profile?.role === "client" && (
+            <Link to="/favorites" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
+              <Heart className="h-4 w-4 inline mr-1" /> Mes favoris
+            </Link>
+          )}
+          
           <Button variant="outline" size="sm" className="w-full justify-start rounded-full">
             <Search className="h-4 w-4 mr-2" />
             Rechercher
