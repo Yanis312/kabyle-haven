@@ -46,8 +46,10 @@ export const uploadFiles = async (
       
       if (createError) {
         console.error('Error creating bucket:', createError);
-        console.error("Error details:", createError.details);
-        console.error("Error status:", createError.status);
+        console.error("Error message:", createError.message);
+        // Only log properties that exist on the StorageError type
+        console.error("Error name:", createError.name);
+        console.error("Error code:", (createError as any).code);
         throw createError;
       }
       
@@ -85,8 +87,7 @@ export const uploadFiles = async (
         if (error) {
           console.error('Error uploading file:', error);
           console.error("Error message:", error.message);
-          console.error("Error details:", error.details);
-          console.error("Error status:", error.status);
+          console.error("Error name:", error.name);
           console.error("Error code:", (error as any).code);
           
           // Provide more specific error feedback based on error type
@@ -163,7 +164,8 @@ export const removeFiles = async (
     if (error) {
       console.error('Error removing files:', error);
       console.error("Error message:", error.message);
-      console.error("Error details:", error.details);
+      console.error("Error name:", error.name);
+      
       // Provide more specific error feedback
       if (error.message.includes("row-level security")) {
         throw new Error(`Permission denied: Make sure you're authenticated and have the right permissions. Details: ${error.message}`);

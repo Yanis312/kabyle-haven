@@ -38,8 +38,8 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
         if (createError) {
           console.error("Error creating bucket:", createError);
           console.error("Error message:", createError.message);
-          console.error("Error details:", createError.details);
-          console.error("Error status:", createError.status);
+          // Only log properties that exist on the StorageError type
+          console.error("Error name:", createError.name);
           console.error("Error code:", (createError as any).code);
           throw createError;
         }
