@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { Property as FullProperty } from "@/data/properties";
 
+// Define a simpler property interface for this page
 interface Property {
   id: string;
   name: string;
@@ -29,6 +31,33 @@ interface Commune {
   id: number;
   name: string;
 }
+
+// Create a function to convert from the backend property format to the format expected by PropertyCard
+const mapToPropertyCardProps = (property: Property, communeName: string): Partial<FullProperty> => {
+  return {
+    id: property.id,
+    title: property.name,
+    description: property.description || "",
+    price: property.price,
+    location: {
+      village: communeName || "",
+      wilaya: ""
+    },
+    images: property.images || ["/placeholder.svg"],
+    features: [`Capacité: ${property.capacity} personnes`],
+    rating: property.rating || 0,
+    reviewCount: 0,
+    // Adding empty values for required properties
+    host: {
+      name: "",
+      avatar: "",
+      languages: []
+    },
+    amenities: [],
+    availability: [],
+    cultural_offerings: []
+  };
+};
 
 const PropertiesPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,11 +79,14 @@ const PropertiesPage = () => {
       try {
         setLoading(true);
         
+        // Convert string id to number
+        const numericId = parseInt(id, 10);
+        
         // Fetch commune info
         const { data: communeData, error: communeError } = await supabase
           .from("communes")
           .select("id, name")
-          .eq("id", id)
+          .eq("id", numericId)
           .single();
           
         if (communeError) throw communeError;
@@ -64,7 +96,7 @@ const PropertiesPage = () => {
         const { data: propertiesData, error: propertiesError } = await supabase
           .from("guesthouses")
           .select("*")
-          .eq("commune_id", id);
+          .eq("commune_id", numericId);
           
         if (propertiesError) throw propertiesError;
         
@@ -239,20 +271,7 @@ const PropertiesPage = () => {
             {filteredProperties.map((property) => (
               <PropertyCard
                 key={property.id}
-                property={{
-                  id: property.id,
-                  title: property.name,
-                  description: property.description || "",
-                  price: property.price,
-                  location: {
-                    village: commune?.name || "",
-                    wilaya: ""
-                  },
-                  images: property.images || ["/placeholder.svg"],
-                  features: [`Capacité: ${property.capacity} personnes`],
-                  rating: property.rating || 0,
-                  reviewCount: 0
-                }}
+                property={mapToPropertyCardProps(property, commune?.name || "")}
               />
             ))}
           </div>

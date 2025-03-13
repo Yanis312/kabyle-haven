@@ -34,11 +34,14 @@ const CommunePage = () => {
       try {
         setLoading(true);
         
+        // Convert string id to number
+        const numericId = parseInt(id, 10);
+        
         // Fetch wilaya info
         const { data: wilayaData, error: wilayaError } = await supabase
           .from("wilayas")
           .select("id, name")
-          .eq("id", id)
+          .eq("id", numericId)
           .single();
           
         if (wilayaError) throw wilayaError;
@@ -48,7 +51,7 @@ const CommunePage = () => {
         const { data: communesData, error: communesError } = await supabase
           .from("communes")
           .select("*")
-          .eq("wilaya_id", id)
+          .eq("wilaya_id", numericId)
           .order("name", { ascending: true });
           
         if (communesError) throw communesError;
