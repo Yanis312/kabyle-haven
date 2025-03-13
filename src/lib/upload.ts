@@ -25,7 +25,11 @@ export const uploadFiles = async (
     console.log("User ID:", sessionData?.session?.user?.id);
     console.log("Session error:", sessionError);
     
-    // Check if bucket exists
+    if (!sessionData?.session) {
+      throw new Error("You must be authenticated to upload files");
+    }
+    
+    // The bucket should already exist from our SQL migration
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
     if (bucketsError) {
@@ -35,25 +39,9 @@ export const uploadFiles = async (
 
     console.log("Available buckets:", buckets);
     
+    // Bucket should exist from our SQL migration
     if (!buckets.some(b => b.name === bucketName)) {
-      console.error(`Bucket ${bucketName} does not exist!`);
-      
-      // Try to create the bucket
-      console.log(`Attempting to create bucket: ${bucketName}`);
-      const { data: newBucket, error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-      });
-      
-      if (createError) {
-        console.error('Error creating bucket:', createError);
-        console.error("Error message:", createError.message);
-        // Only log properties that exist on the StorageError type
-        console.error("Error name:", createError.name);
-        console.error("Error code:", (createError as any).code);
-        throw createError;
-      }
-      
-      console.log('Bucket created successfully:', newBucket);
+      console.log(`Bucket ${bucketName} not found in the list, but it should exist via SQL`);
     }
     
     // Check bucket permissions
@@ -141,6 +129,10 @@ export const removeFiles = async (
     const { data: sessionData } = await supabase.auth.getSession();
     console.log("Authentication status for delete:", sessionData?.session ? "Authenticated" : "Not authenticated");
     console.log("User ID for delete:", sessionData?.session?.user?.id);
+    
+    if (!sessionData?.session) {
+      throw new Error("You must be authenticated to delete files");
+    }
     
     // Extract file paths from public URLs
     const filePaths = urls.map(url => {

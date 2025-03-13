@@ -28,7 +28,7 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       console.log("User role:", sessionData?.session?.user?.user_metadata?.role);
       console.log("User id:", sessionData?.session?.user?.id);
       
-      // Add detailed error handling with a try/catch block
+      // The bucket should now be created by our SQL migration, but we'll try this as a fallback
       try {
         const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
           public: true,
@@ -47,11 +47,8 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
         console.log("Bucket creation response:", data);
       } catch (createCatchError) {
         console.error("Caught exception creating bucket:", createCatchError);
-        throw createCatchError;
+        // Don't throw the error here, just log it since the bucket might exist from our SQL
       }
-
-      // Create RLS policies for the new bucket
-      await setupBucketPolicies(bucketName);
     } else {
       console.log(`Bucket ${bucketName} already exists`);
       
@@ -63,7 +60,7 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       
       if (updateError) {
         console.error("Error updating bucket:", updateError);
-        throw updateError;
+        // Just log the error but don't throw it, we'll still try to use the bucket
       }
       
       console.log(`Bucket ${bucketName} updated to be public`);
@@ -72,7 +69,8 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
     return;
   } catch (error) {
     console.error('Error in createStoragePolicies:', error);
-    throw error;
+    // Log the error but don't throw it to allow the application to continue
+    return;
   }
 };
 
@@ -84,13 +82,11 @@ const setupBucketPolicies = async (bucketName: string): Promise<void> => {
   try {
     console.log(`Setting up RLS policies for bucket ${bucketName}`);
     
-    // This function uses SQL to set up RLS policies - this will be handled by the SQL migration
-    // If needed in the future, you can add SQL functions to update policies
-    
-    console.log("RLS policies should be set up via migration");
+    // This function is now obsolete since we're setting up policies via SQL migration
+    console.log("RLS policies are now set up via SQL migration");
     
   } catch (error) {
     console.error('Error setting up bucket policies:', error);
-    throw error;
+    // Log the error but don't throw it
   }
 };
