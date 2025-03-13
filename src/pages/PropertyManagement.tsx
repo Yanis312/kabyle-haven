@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, Home, Loader2, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Home, Loader2, AlertTriangle, ImageIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { FileInput } from "@/components/ui/file-input";
+import { uploadFiles, removeFiles } from "@/lib/upload";
 
 interface Property {
   id: string;
@@ -36,6 +38,8 @@ interface Commune {
   wilaya_id: number;
 }
 
+const STORAGE_BUCKET = "guesthouse-images";
+
 const PropertyManagement = () => {
   const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -53,13 +57,18 @@ const PropertyManagement = () => {
   const [capacity, setCapacity] = useState("");
   const [selectedWilaya, setSelectedWilaya] = useState<string>("");
   const [selectedCommune, setSelectedCommune] = useState<string>("");
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   // Load properties on mount
   useEffect(() => {
     fetchProperties();
     fetchWilayasAndCommunes();
+    checkStorageBucket();
   }, [user]);
   
   // Filter communes when wilaya changes
@@ -80,6 +89,7 @@ const PropertyManagement = () => {
       setDescription(editingProperty.description || "");
       setPrice(editingProperty.price.toString());
       setCapacity(editingProperty.capacity.toString());
+      setExistingImages(editingProperty.images || []);
       
       if (editingProperty.wilaya_id) {
         setSelectedWilaya(editingProperty.wilaya_id.toString());
@@ -92,6 +102,30 @@ const PropertyManagement = () => {
       resetForm();
     }
   }, [editingProperty]);
+  
+  const checkStorageBucket = async () => {
+    try {
+      // Check if the bucket exists
+      const { data: buckets, error } = await supabase.storage.listBuckets();
+      
+      if (error) throw error;
+      
+      const bucketExists = buckets.some(bucket => bucket.name === STORAGE_BUCKET);
+      
+      if (!bucketExists) {
+        // Create the bucket if it doesn't exist
+        const { error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+          public: true,
+        });
+        
+        if (createError) throw createError;
+        
+        console.log(`Storage bucket '${STORAGE_BUCKET}' created successfully`);
+      }
+    } catch (err: any) {
+      console.error("Error checking/creating storage bucket:", err);
+    }
+  };
   
   const fetchProperties = async () => {
     if (!user) return;
@@ -156,6 +190,17 @@ const PropertyManagement = () => {
     
     try {
       setIsSubmitting(true);
+      setIsUploading(true);
+      
+      // Upload new images if any
+      let allImages = [...existingImages];
+      
+      if (uploadedFiles.length > 0) {
+        const uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET, user.id);
+        allImages = [...allImages, ...uploadedImageUrls];
+      }
+      
+      setIsUploading(false);
       
       const propertyData = {
         name,
@@ -165,6 +210,7 @@ const PropertyManagement = () => {
         wilaya_id: parseInt(selectedWilaya),
         commune_id: parseInt(selectedCommune),
         owner_id: user.id,
+        images: allImages.length > 0 ? allImages : null
       };
       
       let result;
@@ -192,11 +238,13 @@ const PropertyManagement = () => {
       // Refresh properties list
       fetchProperties();
       resetForm();
+      setDialogOpen(false);
     } catch (err: any) {
       console.error("Error saving property:", err);
       toast.error(`Erreur lors de l'enregistrement: ${err.message}`);
     } finally {
       setIsSubmitting(false);
+      setIsUploading(false);
     }
   };
   
@@ -210,6 +258,17 @@ const PropertyManagement = () => {
     try {
       setIsDeleting(true);
       
+      // First, get the property to access its images
+      const { data: property, error: getError } = await supabase
+        .from("guesthouses")
+        .select("images")
+        .eq("id", id)
+        .eq("owner_id", user.id)
+        .single();
+      
+      if (getError) throw getError;
+      
+      // Delete the property
       const { error } = await supabase
         .from("guesthouses")
         .delete()
@@ -217,6 +276,11 @@ const PropertyManagement = () => {
         .eq("owner_id", user.id);
       
       if (error) throw error;
+      
+      // Delete associated images if any
+      if (property && property.images && property.images.length > 0) {
+        await removeFiles(property.images, STORAGE_BUCKET);
+      }
       
       toast.success("Logement supprimé avec succès");
       
@@ -230,6 +294,32 @@ const PropertyManagement = () => {
     }
   };
   
+  const handleRemoveImage = async (url: string) => {
+    try {
+      // Remove from existing images
+      const updatedImages = existingImages.filter(img => img !== url);
+      setExistingImages(updatedImages);
+      
+      // If editing, update the property in the database
+      if (editingProperty) {
+        const { error } = await supabase
+          .from("guesthouses")
+          .update({ images: updatedImages.length > 0 ? updatedImages : null })
+          .eq("id", editingProperty.id)
+          .eq("owner_id", user?.id || '');
+        
+        if (error) throw error;
+      }
+      
+      // Remove from storage
+      await removeFiles([url], STORAGE_BUCKET);
+      
+    } catch (err: any) {
+      console.error("Error removing image:", err);
+      toast.error(`Erreur lors de la suppression de l'image: ${err.message}`);
+    }
+  };
+  
   const resetForm = () => {
     setName("");
     setDescription("");
@@ -238,6 +328,8 @@ const PropertyManagement = () => {
     setSelectedWilaya("");
     setSelectedCommune("");
     setEditingProperty(null);
+    setUploadedFiles([]);
+    setExistingImages([]);
   };
   
   const getCommune = (id: number | null) => {
@@ -259,7 +351,7 @@ const PropertyManagement = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Gestion des logements</h1>
           
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => resetForm()}>
                 <PlusCircle className="h-4 w-4 mr-2" /> Ajouter un logement
@@ -361,6 +453,17 @@ const PropertyManagement = () => {
                       </Select>
                     </div>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Images</Label>
+                    <FileInput 
+                      onFilesChange={setUploadedFiles}
+                      selectedFiles={uploadedFiles}
+                      urls={existingImages}
+                      onRemoveUrl={handleRemoveImage}
+                      maxFiles={5}
+                    />
+                  </div>
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-4">
@@ -369,12 +472,12 @@ const PropertyManagement = () => {
                   </DialogClose>
                   <Button 
                     type="submit" 
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isUploading}
                   >
-                    {isSubmitting ? (
+                    {isSubmitting || isUploading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {editingProperty ? "Mise à jour..." : "Création..."}
+                        {isUploading ? "Téléchargement des images..." : (editingProperty ? "Mise à jour..." : "Création...")}
                       </>
                     ) : (
                       editingProperty ? "Mettre à jour" : "Créer"
@@ -429,7 +532,7 @@ const PropertyManagement = () => {
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400">
-                      <Home className="h-12 w-12" />
+                      <ImageIcon className="h-12 w-12" />
                     </div>
                   )}
                 </div>
@@ -462,6 +565,24 @@ const PropertyManagement = () => {
                         {getCommune(property.commune_id)}
                       </div>
                     </div>
+                    
+                    {property.images && property.images.length > 1 && (
+                      <div className="flex gap-1 mt-2">
+                        {property.images.slice(1, 4).map((img, idx) => (
+                          <img 
+                            key={idx} 
+                            src={img} 
+                            alt={`${property.name} image ${idx + 2}`}
+                            className="h-12 w-12 rounded object-cover"
+                          />
+                        ))}
+                        {property.images.length > 4 && (
+                          <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">
+                            +{property.images.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
                 
