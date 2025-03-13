@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus, Loader2 } from "lucide-react";
 
 const Auth = () => {
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp, loading, user } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  const navigate = useNavigate();
   
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -26,15 +27,28 @@ const Auth = () => {
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<"client" | "proprietaire">("client");
   
+  console.log("Auth page rendering, user state:", { hasUser: !!user, loading });
+  
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      console.log("User already logged in, redirecting from auth page");
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Login form submitted with email:", loginEmail);
     await signIn(loginEmail, loginPassword);
   };
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Register form submitted with email:", registerEmail);
     
     if (registerPassword !== confirmPassword) {
+      console.error("Password mismatch");
       return alert("Les mots de passe ne correspondent pas");
     }
     
@@ -89,8 +103,17 @@ const Auth = () => {
                     className="w-full bg-kabyle-terracotta hover:bg-kabyle-terracotta/90"
                     disabled={loading}
                   >
-                    <LogIn className="mr-2 h-4 w-4" />
-                    {loading ? "Connexion..." : "Se connecter"}
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                        Connexion...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Se connecter
+                      </>
+                    )}
                   </Button>
                   <p className="text-sm text-center text-gray-500">
                     Vous n'avez pas de compte?{" "}
@@ -201,8 +224,17 @@ const Auth = () => {
                     className="w-full bg-kabyle-blue hover:bg-kabyle-blue/90"
                     disabled={loading}
                   >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {loading ? "Création du compte..." : "Créer un compte"}
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Création du compte...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Créer un compte
+                      </>
+                    )}
                   </Button>
                   <p className="text-sm text-center text-gray-500">
                     Vous avez déjà un compte?{" "}

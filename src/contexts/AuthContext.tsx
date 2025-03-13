@@ -37,15 +37,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const navigate = useNavigate();
 
+  console.log("AuthProvider initializing, current state:", { 
+    hasSession: !!session, 
+    hasUser: !!user, 
+    hasProfile: !!profile,
+    loading,
+    isSigningOut
+  });
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session ? "Active session" : "No session");
+      console.log("Initial session check:", session ? "Active session found" : "No session found");
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        console.log("User found in session, fetching profile for:", session.user.id);
         fetchProfile(session.user.id);
       } else {
+        console.log("No user in session, setting loading to false");
         setLoading(false);
       }
     });
@@ -58,13 +68,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log("Auth state change - user exists, fetching profile");
           await fetchProfile(session.user.id);
         } else {
+          console.log("Auth state change - no user, clearing profile");
           setProfile(null);
           setLoading(false);
           
           // If user is logged out, redirect to auth page
           if (event === 'SIGNED_OUT') {
+            console.log("SIGNED_OUT event - redirecting to auth page");
             navigate("/auth", { replace: true });
           }
         }
@@ -72,6 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     return () => {
+      console.log("Cleaning up auth subscription");
       subscription.unsubscribe();
     };
   }, [navigate]);
@@ -85,16 +99,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If session state doesn't match what we have stored, update it
       if (!!session !== !!data.session) {
         console.log("Session state mismatch detected on focus - updating...");
+        console.log("Current session state:", !!session);
+        console.log("New session state:", !!data.session);
+        
         setSession(data.session);
         setUser(data.session?.user ?? null);
         
         if (data.session?.user) {
+          console.log("Session exists after tab switch, fetching profile");
           await fetchProfile(data.session.user.id);
         } else {
+          console.log("No session after tab switch, clearing profile");
           setProfile(null);
           // Redirect to auth page if session is gone
           navigate("/auth", { replace: true });
         }
+      } else {
+        console.log("Session state unchanged after focus");
       }
     };
 
@@ -173,6 +194,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       setLoading(true);
+      console.log("Updating profile for user:", user.id, profileData);
       
       const { error } = await supabase
         .from('profiles')
@@ -202,6 +224,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   ) => {
     try {
       setLoading(true);
+      console.log("Signing up with email:", email);
       
       // Register the user
       const { data, error } = await supabase.auth.signUp({
@@ -221,6 +244,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (data?.user) {
+        console.log("User registered successfully:", data.user.id);
+        
         // Create the profile with the same ID
         const profileCreated = await createProfile(
           data.user.id,
@@ -248,6 +273,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log("Signing in with email:", email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -257,6 +284,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
 
+      console.log("Sign in successful:", data);
+
       // Redirect based on role
       if (data.user) {
         const { data: profileData } = await supabase
@@ -265,9 +294,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .eq("id", data.user.id)
           .maybeSingle();
 
+        console.log("User profile data:", profileData);
+
         if (profileData?.role === "proprietaire") {
+          console.log("Redirecting to host page (proprietaire)");
           navigate("/host", { replace: true });
         } else {
+          console.log("Redirecting to home page (client)");
           navigate("/", { replace: true });
         }
         
@@ -282,22 +315,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    if (isSigningOut) return; // Prevent multiple sign-out attempts
+    console.log("signOut called, current state:", { isSigningOut });
+    
+    if (isSigningOut) {
+      console.log("Already signing out, ignoring duplicate request");
+      return;
+    }
     
     try {
       setIsSigningOut(true);
+      console.log("Starting sign out process");
       
-      // Force clear state immediately
+      // Clear local state immediately for a more responsive UI
+      console.log("Clearing local state");
       setSession(null);
       setUser(null);
       setProfile(null);
       
-      // Sign out all sessions
+      // Sign out from Supabase (all sessions)
+      console.log("Calling Supabase signOut with scope:global");
       const { error } = await supabase.auth.signOut({
-        scope: 'global'
+        scope: 'global' // Sign out from all devices
       });
       
       if (error) {
+        console.error("Supabase signOut returned error:", error);
         throw error;
       }
       
@@ -305,27 +347,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast.success("Déconnexion réussie!");
       
       // Navigate to auth page
+      console.log("Navigating to auth page");
       navigate("/auth", { replace: true });
       
-      // Force reload as last resort to clear any lingering state
-      window.location.reload();
+      // Force a page reload as last resort
+      console.log("Forcing page reload");
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error: any) {
-      toast.error(`Erreur de déconnexion: ${error.message}`);
       console.error("Sign out error:", error);
+      toast.error(`Erreur de déconnexion: ${error.message}`);
       
-      // Try to restore session if there was an error during signout
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      
-      if (data.session?.user) {
-        await fetchProfile(data.session.user.id);
+      // Try to restore session if there was an error
+      console.log("Attempting to restore session after error");
+      try {
+        const { data } = await supabase.auth.getSession();
+        console.log("Restored session:", data.session ? "Session exists" : "No session");
+        
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        
+        if (data.session?.user) {
+          await fetchProfile(data.session.user.id);
+        }
+      } catch (restoreError) {
+        console.error("Failed to restore session:", restoreError);
       }
     } finally {
+      console.log("Sign out process completed");
       setLoading(false);
       setIsSigningOut(false);
     }
   };
+
+  console.log("AuthProvider rendering with state:", { 
+    hasSession: !!session, 
+    hasUser: !!user, 
+    hasProfile: !!profile,
+    loading,
+    isSigningOut
+  });
 
   return (
     <AuthContext.Provider

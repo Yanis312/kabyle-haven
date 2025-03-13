@@ -19,6 +19,13 @@ const Navbar = () => {
   const { user, profile, signOut, isSigningOut } = useAuth();
   const navigate = useNavigate();
 
+  console.log("Navbar rendering with user state:", { 
+    hasUser: !!user, 
+    hasProfile: !!profile, 
+    profileRole: profile?.role, 
+    isSigningOut 
+  });
+
   // Close mobile menu when navigating
   useEffect(() => {
     if (isMenuOpen) {
@@ -30,7 +37,14 @@ const Navbar = () => {
     e.preventDefault();
     e.stopPropagation();
     
+    console.log("Logout button clicked, current state:", { isSigningOut });
+    if (isSigningOut) {
+      console.log("Ignoring click - already signing out");
+      return;
+    }
+    
     try {
+      console.log("Calling signOut method");
       await signOut();
     } catch (error) {
       console.error("Error signing out:", error);
