@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "Active session" : "No session");
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -50,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event, session);
+        console.log("Auth state changed:", event, session ? "Session exists" : "No session");
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -59,6 +60,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           setProfile(null);
           setLoading(false);
+          
+          // If user is logged out, redirect to auth page
+          if (event === 'SIGNED_OUT') {
+            navigate("/auth", { replace: true });
+          }
         }
       }
     );
@@ -66,7 +72,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
+
+  // Check session status when window gets focus
+  useEffect(() => {
+    const handleFocus = async () => {
+      console.log("Window focused - checking session...");
+      const { data } = await supabase.auth.getSession();
+      
+      // If session state doesn't match what we have stored, update it
+      if (!!session !== !!data.session) {
+        console.log("Session state mismatch detected on focus - updating...");
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        
+        if (data.session?.user) {
+          await fetchProfile(data.session.user.id);
+        } else {
+          setProfile(null);
+          navigate("/auth", { replace: true });
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [session, navigate]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -247,20 +281,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
+      console.log("Signing out user...");
+      
+      // Important: Clear all local state first before making the signOut request
+      // This ensures UI updates immediately, even if the request takes time
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
+      // Now perform the actual signOut
+      const { error } = await supabase.auth.signOut({
+        scope: 'global' // This ensures ALL devices are logged out
+      });
       
       if (error) {
         throw error;
       }
       
-      // Clear all auth state
-      setSession(null);
-      setUser(null);
-      setProfile(null);
+      console.log("Sign out successful");
       
+      // Force navigate to auth page
       navigate("/auth", { replace: true });
       toast.success("Déconnexion réussie!");
     } catch (error: any) {
+      // Restore session if there was an error
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      
       toast.error(`Erreur de déconnexion: ${error.message}`);
       console.error("Sign out error:", error);
     } finally {

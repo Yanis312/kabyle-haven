@@ -2,8 +2,8 @@
 import { Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   DropdownMenu, 
@@ -15,7 +15,24 @@ import {
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+
+  // Close mobile menu when navigating
+  useEffect(() => {
+    if (isMenuOpen) {
+      setIsMenuOpen(false);
+    }
+  }, [navigate]);
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b">
@@ -80,8 +97,13 @@ const Navbar = () => {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-500">
-                  <LogOut className="h-4 w-4 mr-2" /> Déconnexion
+                <DropdownMenuItem 
+                  onClick={handleSignOut} 
+                  className="cursor-pointer text-red-500"
+                  disabled={loading}
+                >
+                  <LogOut className="h-4 w-4 mr-2" /> 
+                  {loading ? "Déconnexion..." : "Déconnexion"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -144,10 +166,11 @@ const Navbar = () => {
                 variant="outline" 
                 size="sm" 
                 className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
-                onClick={signOut}
+                onClick={handleSignOut}
+                disabled={loading}
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Déconnexion
+                {loading ? "Déconnexion..." : "Déconnexion"}
               </Button>
             </>
           ) : (
