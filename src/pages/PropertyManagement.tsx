@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,38 +40,7 @@ const PropertyManagement = () => {
   const checkStorageBucket = async () => {
     try {
       console.log("Checking if storage bucket exists:", STORAGE_BUCKET);
-      
-      const { data: buckets, error } = await supabase.storage.listBuckets();
-      
-      if (error) {
-        console.error("Error listing buckets:", error);
-        throw error;
-      }
-      
-      console.log("Available buckets:", buckets);
-      
-      const bucketExists = buckets.some(bucket => bucket.name === STORAGE_BUCKET);
-      console.log("Bucket exists?", bucketExists);
-      
-      if (!bucketExists) {
-        console.log("Attempting to create bucket:", STORAGE_BUCKET);
-        
-        const { data, error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
-          public: true,
-        });
-        
-        if (createError) {
-          console.error("Error creating bucket:", createError);
-          throw createError;
-        }
-        
-        console.log("Bucket creation response:", data);
-        
-        // Use our utility function to set up policies
-        await createStoragePolicies(STORAGE_BUCKET);
-        
-        console.log(`Storage bucket '${STORAGE_BUCKET}' created successfully`);
-      }
+      await createStoragePolicies(STORAGE_BUCKET);
     } catch (err: any) {
       console.error("Error checking/creating storage bucket:", err);
       toast.error(`Error with storage: ${err.message}`);
@@ -84,6 +52,7 @@ const PropertyManagement = () => {
     
     try {
       setLoading(true);
+      setError(null);
       
       const { data, error } = await supabase
         .from("guesthouses")
@@ -133,18 +102,28 @@ const PropertyManagement = () => {
       return;
     }
     
-    // Extract form data from the submitted form
-    const formData = new FormData(e.target as HTMLFormElement);
-    const name = formData.get('property-name') as string;
-    const description = formData.get('property-description') as string;
-    const price = formData.get('property-price') as string;
-    const capacity = formData.get('property-capacity') as string;
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
     
-    // Get select values from data attributes
-    const selectWilaya = document.querySelector('[id="property-wilaya"]');
-    const selectCommune = document.querySelector('[id="property-commune"]');
-    const selectedWilaya = selectWilaya?.getAttribute('data-value') || '';
-    const selectedCommune = selectCommune?.getAttribute('data-value') || '';
+    const name = form.querySelector<HTMLInputElement>('#property-name')?.value;
+    const description = form.querySelector<HTMLTextAreaElement>('#property-description')?.value || '';
+    const price = form.querySelector<HTMLInputElement>('#property-price')?.value;
+    const capacity = form.querySelector<HTMLInputElement>('#property-capacity')?.value;
+    
+    const selectElements = form.querySelectorAll('select');
+    let selectedWilaya = '';
+    let selectedCommune = '';
+    
+    selectElements.forEach(select => {
+      const label = select.closest('.space-y-2')?.querySelector('label');
+      if (label?.textContent?.includes('Wilaya')) {
+        selectedWilaya = select.value;
+      } else if (label?.textContent?.includes('Commune')) {
+        selectedCommune = select.value;
+      }
+    });
+    
+    console.log("Form values:", { name, price, capacity, selectedWilaya, selectedCommune });
     
     if (!name || !price || !capacity || !selectedWilaya || !selectedCommune) {
       toast.error("Veuillez remplir tous les champs obligatoires");
@@ -155,14 +134,20 @@ const PropertyManagement = () => {
       setIsSubmitting(true);
       setIsUploading(true);
       
-      // Get the list of files from the hidden input
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const uploadedFiles = fileInput?.files ? Array.from(fileInput.files) : [];
+      const uploadedFilesElements = document.querySelectorAll('img[src^="blob:"]');
+      const uploadedFiles: File[] = [];
       
-      // Get the existing images from data attributes
-      const existingImagesEl = document.querySelector('[id="existing-images"]');
-      const existingImagesJson = existingImagesEl?.getAttribute('data-images') || '[]';
-      const existingImages = JSON.parse(existingImagesJson);
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      if (fileInputs && fileInputs.length > 0) {
+        const fileInput = fileInputs[0];
+        if (fileInput.files && fileInput.files.length > 0) {
+          for (let i = 0; i < fileInput.files.length; i++) {
+            uploadedFiles.push(fileInput.files[i]);
+          }
+        }
+      }
+      
+      const existingImages = editingProperty?.images || [];
       
       let allImages = [...existingImages];
       
@@ -189,6 +174,8 @@ const PropertyManagement = () => {
         owner_id: user.id,
         images: allImages.length > 0 ? allImages : null
       };
+      
+      console.log("Saving property data:", propertyData);
       
       let result;
       
@@ -277,7 +264,6 @@ const PropertyManagement = () => {
         
         if (error) throw error;
         
-        // Update the local state for the editing property
         setEditingProperty({
           ...editingProperty,
           images: updatedImages.length > 0 ? updatedImages : null
@@ -324,7 +310,7 @@ const PropertyManagement = () => {
         {loading ? (
           <LoadingState />
         ) : error ? (
-          <ErrorState error={error} />
+          <ErrorState error={error} onRetry={fetchProperties} />
         ) : properties.length === 0 ? (
           <EmptyPropertyList
             wilayas={wilayas}

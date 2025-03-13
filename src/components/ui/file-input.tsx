@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Input } from "./input"
@@ -36,11 +37,14 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
       const newFilesArray = Array.from(fileList)
       const updatedFiles = [...files, ...newFilesArray].slice(0, maxFiles)
       
+      console.log("Files selected:", newFilesArray.length, "Total files:", updatedFiles.length);
+      
       setFiles(updatedFiles)
       if (onFilesChange) {
         onFilesChange(updatedFiles)
       }
       
+      // Reset the input to allow selecting the same files again
       if (inputRef.current) {
         inputRef.current.value = ""
       }
@@ -68,7 +72,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
       return (
         <div className="mt-2 flex flex-wrap gap-2">
           {fileUrls.map((url, index) => (
-            <div key={index} className="relative group h-20 w-20 rounded-md overflow-hidden border border-input">
+            <div key={`url-${index}`} className="relative group h-20 w-20 rounded-md overflow-hidden border border-input">
               <img 
                 src={url} 
                 alt={`Uploaded preview ${index}`} 
@@ -85,7 +89,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
           ))}
           
           {files.map((file, index) => (
-            <div key={index} className="relative group h-20 w-20 rounded-md overflow-hidden border border-input">
+            <div key={`file-${index}`} className="relative group h-20 w-20 rounded-md overflow-hidden border border-input">
               <img 
                 src={URL.createObjectURL(file)} 
                 alt={`Preview ${index}`} 
@@ -109,6 +113,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
         <div className="flex items-center gap-2">
           <Input
             type="file"
+            name="files"
             ref={inputRef}
             onChange={handleFileChange}
             className="hidden"

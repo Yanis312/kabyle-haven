@@ -84,6 +84,11 @@ const PropertyForm = ({
       const filtered = communes.filter(commune => 
         commune.wilaya_id === parseInt(selectedWilaya));
       setFilteredCommunes(filtered);
+      
+      // Reset commune if wilaya changes
+      if (filteredCommunes.length > 0 && !filteredCommunes.some(c => c.id.toString() === selectedCommune)) {
+        setSelectedCommune("");
+      }
     } else {
       setFilteredCommunes([]);
     }
@@ -105,6 +110,17 @@ const PropertyForm = ({
     await onRemoveImage(url);
   };
 
+  console.log("Form state:", { 
+    name, 
+    description, 
+    price, 
+    capacity, 
+    selectedWilaya, 
+    selectedCommune,
+    uploadedFiles,
+    existingImages
+  });
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4">
@@ -112,6 +128,7 @@ const PropertyForm = ({
           <Label htmlFor="property-name">Nom du logement *</Label>
           <Input
             id="property-name"
+            name="property-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Maison traditionnelle, Villa moderne, etc."
@@ -123,6 +140,7 @@ const PropertyForm = ({
           <Label htmlFor="property-description">Description</Label>
           <Textarea
             id="property-description"
+            name="property-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Décrivez votre logement..."
@@ -135,6 +153,7 @@ const PropertyForm = ({
             <Label htmlFor="property-price">Prix par nuit (DA) *</Label>
             <Input
               id="property-price"
+              name="property-price"
               type="number"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
@@ -148,6 +167,7 @@ const PropertyForm = ({
             <Label htmlFor="property-capacity">Capacité (personnes) *</Label>
             <Input
               id="property-capacity"
+              name="property-capacity"
               type="number"
               value={capacity}
               onChange={(e) => setCapacity(e.target.value)}
@@ -162,10 +182,12 @@ const PropertyForm = ({
           <div className="space-y-2">
             <Label htmlFor="property-wilaya">Wilaya *</Label>
             <Select
+              name="property-wilaya"
               value={selectedWilaya}
               onValueChange={setSelectedWilaya}
+              required
             >
-              <SelectTrigger>
+              <SelectTrigger id="property-wilaya">
                 <SelectValue placeholder="Sélectionner une wilaya" />
               </SelectTrigger>
               <SelectContent>
@@ -181,12 +203,20 @@ const PropertyForm = ({
           <div className="space-y-2">
             <Label htmlFor="property-commune">Commune *</Label>
             <Select
+              name="property-commune"
               value={selectedCommune}
               onValueChange={setSelectedCommune}
-              disabled={!selectedWilaya}
+              disabled={!selectedWilaya || filteredCommunes.length === 0}
+              required
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner une commune" />
+              <SelectTrigger id="property-commune">
+                <SelectValue placeholder={
+                  !selectedWilaya 
+                    ? "Sélectionnez d'abord une wilaya" 
+                    : filteredCommunes.length === 0 
+                      ? "Aucune commune disponible" 
+                      : "Sélectionner une commune"
+                } />
               </SelectTrigger>
               <SelectContent>
                 {filteredCommunes.map((commune) => (
@@ -207,6 +237,12 @@ const PropertyForm = ({
             urls={existingImages}
             onRemoveUrl={handleRemoveImage}
             maxFiles={5}
+          />
+          <input 
+            type="hidden" 
+            id="existing-images" 
+            name="existing-images"
+            data-images={JSON.stringify(existingImages)}
           />
         </div>
       </div>
