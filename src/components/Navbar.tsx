@@ -1,240 +1,171 @@
-
-import { Search, User, Menu, LogOut, Plus, Heart, MapPin, Home } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+import {
+  LogIn,
+  LogOut,
+  UserPlus,
+  User,
+  UserCircle,
+  Home,
+  Calendar,
+  CirclePlus
+} from "lucide-react";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 
-const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, signOut, isSigningOut } = useAuth();
+// Update the Navbar component to add booking links
+export default function Navbar() {
+  const { user, profile, logout } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
 
-  console.log("Navbar rendering with user state:", { 
-    hasUser: !!user, 
-    hasProfile: !!profile, 
-    profileRole: profile?.role, 
-    isSigningOut 
-  });
-
-  // Close mobile menu when navigating
-  useEffect(() => {
-    if (isMenuOpen) {
-      setIsMenuOpen(false);
-    }
-  }, [navigate]);
-
-  const handleSignOut = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("Logout button clicked, current state:", { isSigningOut, hasUser: !!user });
-    if (isSigningOut) {
-      console.log("Ignoring click - already signing out");
-      return;
-    }
-    
-    try {
-      console.log("Calling signOut method");
-      await signOut();
-    } catch (error) {
-      console.error("Error signing out:", error);
-      toast.error("Erreur lors de la déconnexion. Veuillez réessayer.");
-    }
+  const handleLogout = async () => {
+    await logout();
+    navigate("/auth");
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-kabyle-terracotta flex items-center justify-center">
-            <span className="text-white font-bold">K</span>
-          </div>
-          <span className="font-playfair text-xl font-semibold bg-gradient-to-r from-kabyle-terracotta to-kabyle-blue bg-clip-text text-transparent">
-            KabyleHaven
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+      <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+        <Link to="/" className="hidden font-bold sm:block">
+          <span className="text-2xl">
+            ⵣ<span>StayZen</span>
           </span>
         </Link>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="font-medium hover:text-kabyle-terracotta transition-colors">
-            Accueil
-          </Link>
-          <Link to="/wilaya" className="font-medium hover:text-kabyle-terracotta transition-colors">
-            <MapPin className="h-4 w-4 inline mr-1" />
-            Wilayas
-          </Link>
-          <Link to="/regions" className="font-medium hover:text-kabyle-terracotta transition-colors">
-            Régions
-          </Link>
-          {profile?.role === "proprietaire" ? (
-            <Link to="/property-management" className="font-medium hover:text-kabyle-terracotta transition-colors">
-              <Home className="h-4 w-4 inline mr-1" />
-              Mes logements
-            </Link>
-          ) : (
-            <Link to="/host" className="font-medium hover:text-kabyle-terracotta transition-colors">
-              Devenir hôte
-            </Link>
-          )}
+        <div className="w-full flex-1 sm:w-auto">
+          <Command className="rounded-lg border shadow-sm">
+            <CommandInput placeholder="Rechercher un logement..." />
+            <CommandList>
+              <CommandEmpty>Aucun résultat.</CommandEmpty>
+              <CommandGroup heading="Suggestions">
+                <CommandItem>Logement 1</CommandItem>
+                <CommandItem>Logement 2</CommandItem>
+                <CommandItem>Logement 3</CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup heading="Aide">
+                <CommandItem>
+                  Rechercher un logement par ville, région...
+                </CommandItem>
+              </CommandGroup>
+            </CommandList>
+          </Command>
         </div>
-
-        {/* User Actions */}
-        <div className="hidden md:flex items-center space-x-4">
-          <Button variant="outline" size="sm" className="rounded-full">
-            <Search className="h-4 w-4 mr-2" />
-            Rechercher
-          </Button>
+        <div className="flex items-center space-x-2">
+          <ModeToggle />
           
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="rounded-full">
-                  <User className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="cursor-pointer">
-                    Mon profil
-                  </Link>
-                </DropdownMenuItem>
-                
-                {profile?.role === "proprietaire" ? (
-                  <DropdownMenuItem asChild>
-                    <Link to="/property-management" className="cursor-pointer">
-                      <Home className="h-4 w-4 mr-2" /> Gérer mes logements
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link to="/host" className="cursor-pointer">
-                      Devenir hôte
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                
-                {profile?.role === "client" && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/favorites" className="cursor-pointer">
-                      <Heart className="h-4 w-4 mr-2" /> Mes favoris
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={handleSignOut} 
-                  className="cursor-pointer text-red-500"
-                  disabled={isSigningOut}
-                >
-                  <LogOut className="h-4 w-4 mr-2" /> 
-                  {isSigningOut ? "Déconnexion..." : "Déconnexion"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button variant="ghost" size="sm" asChild className="rounded-full">
-              <Link to="/auth">
-                <User className="h-4 w-4 mr-2" />
-                Connexion
-              </Link>
-            </Button>
-          )}
-        </div>
-
-        {/* Mobile Menu Button */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="md:hidden" 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* Mobile Menu */}
-      <div className={cn(
-        "md:hidden absolute w-full bg-white shadow-md transition-all duration-300 ease-in-out",
-        isMenuOpen ? "max-h-screen border-b" : "max-h-0 overflow-hidden"
-      )}>
-        <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-          <Link to="/" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-            Accueil
-          </Link>
-          <Link to="/wilaya" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-            <MapPin className="h-4 w-4 inline mr-1" />
-            Wilayas
-          </Link>
-          <Link to="/regions" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-            Régions
-          </Link>
-          
-          {profile?.role === "proprietaire" ? (
-            <>
-              <Link to="/property-management" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-                <Home className="h-4 w-4 inline mr-1" /> Mes logements
-              </Link>
-              <Link to="/property-management" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-                <Plus className="h-4 w-4 inline mr-1" /> Ajouter un logement
-              </Link>
-            </>
-          ) : (
-            <Link to="/host" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-              Devenir hôte
-            </Link>
-          )}
-          
-          {profile?.role === "client" && (
-            <Link to="/favorites" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-              <Heart className="h-4 w-4 inline mr-1" /> Mes favoris
-            </Link>
-          )}
-          
-          <Button variant="outline" size="sm" className="w-full justify-start rounded-full">
-            <Search className="h-4 w-4 mr-2" />
-            Rechercher
-          </Button>
-          
-          {user ? (
-            <>
-              <Link to="/profile" className="font-medium py-2 hover:text-kabyle-terracotta transition-colors">
-                Mon profil
-              </Link>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
-                onClick={handleSignOut}
-                disabled={isSigningOut}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                {isSigningOut ? "Déconnexion..." : "Déconnexion"}
+          {/* Update the menu items in the dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="relative h-10 w-10 rounded-full">
+                <Avatar>
+                  {user ? (
+                    <>
+                      <AvatarImage 
+                        src={user.profilePictureUrl} 
+                        alt={`${profile?.first_name || ''} ${profile?.last_name || ''}`} 
+                      />
+                      <AvatarFallback>
+                        {profile?.first_name?.[0] || ''}
+                        {profile?.last_name?.[0] || ''}
+                      </AvatarFallback>
+                    </>
+                  ) : (
+                    <>
+                      <AvatarImage src="" alt="Avatar" />
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </>
+                  )}
+                </Avatar>
               </Button>
-            </>
-          ) : (
-            <Link to="/auth">
-              <Button variant="default" size="sm" className="w-full justify-start">
-                <User className="h-4 w-4 mr-2" />
-                Connexion / Inscription
-              </Button>
-            </Link>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {user ? (
+                <>
+                  <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">
+                      <UserCircle className="mr-2 h-4 w-4" />
+                      Profil
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  {/* Add booking links based on user role */}
+                  {profile?.role === 'proprietaire' ? (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/property-management">
+                          <Home className="mr-2 h-4 w-4" />
+                          Mes logements
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/booking-management">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Demandes de réservation
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link to="/my-bookings">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Mes réservations
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  {profile?.role !== 'proprietaire' && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/host">
+                          <CirclePlus className="mr-2 h-4 w-4" />
+                          Devenir hôte
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Déconnexion
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth?mode=login">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Connexion
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth?mode=signup">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Inscription
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-    </nav>
+    </header>
   );
-};
-
-export default Navbar;
+}

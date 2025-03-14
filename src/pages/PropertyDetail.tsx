@@ -17,22 +17,131 @@ import {
 } from "@/components/ui/carousel";
 import PropertyMap from "@/components/PropertyMap";
 import PropertyAvailability from "@/components/PropertyAvailability";
+import BookingRequestForm from "@/components/BookingRequestForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface PropertyDetailData {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  capacity: number;
+  rating: number;
+  images: string[];
+  availability: any;
+  commune_id: number;
+  commune: {
+    name: string;
+    wilaya: {
+      name: string;
+    }
+  }
+}
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [property, setProperty] = useState<Property | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   
+  // Fetch property data from Supabase
+  const { data: propertyData, isLoading, error } = useQuery({
+    queryKey: ['property', id],
+    queryFn: async () => {
+      if (!id) throw new Error("Property ID is required");
+      
+      const { data, error } = await supabase
+        .from('guesthouses')
+        .select(`
+          *,
+          commune:communes!inner(
+            name,
+            wilaya:wilayas!inner(name)
+          )
+        `)
+        .eq('id', id)
+        .single();
+        
+      if (error) throw error;
+      return data as PropertyDetailData;
+    },
+    enabled: !!id,
+  });
+  
+  // Transform Supabase data to match Property interface
   useEffect(() => {
-    if (id) {
+    if (propertyData) {
+      const transformedProperty: Property = {
+        id: propertyData.id,
+        title: propertyData.name,
+        description: propertyData.description || "",
+        price: propertyData.price,
+        location: {
+          village: propertyData.commune.name,
+          wilaya: propertyData.commune.wilaya.name
+        },
+        images: propertyData.images || ["/placeholder.svg"],
+        features: [`Capacité: ${propertyData.capacity} personnes`],
+        rating: propertyData.rating || 0,
+        reviewCount: 0,
+        // Default values for required properties
+        host: {
+          name: "Hôte",
+          avatar: "/placeholder.svg",
+          languages: ["Français", "Kabyle"]
+        },
+        amenities: ["Wi-Fi", "Cuisine équipée", "Parking"],
+        availability: propertyData.availability || null,
+        cultural_offerings: ["Traditions locales", "Cuisine traditionnelle"]
+      };
+      
+      setProperty(transformedProperty);
+    }
+  }, [propertyData]);
+  
+  // Fallback to static data if needed (during development/transition)
+  useEffect(() => {
+    if (id && !propertyData && !isLoading) {
       const foundProperty = properties.find(p => p.id === id);
       if (foundProperty) {
         setProperty(foundProperty);
       }
     }
-  }, [id]);
+  }, [id, propertyData, isLoading]);
   
-  if (!property) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <Skeleton className="h-12 w-2/3 mb-2" />
+            <Skeleton className="h-6 w-1/3 mb-6" />
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              <Skeleton className="aspect-[4/3] rounded-lg" />
+              <Skeleton className="aspect-[4/3] rounded-lg" />
+              <Skeleton className="aspect-[4/3] rounded-lg" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              <div className="lg:col-span-2">
+                <Skeleton className="h-8 w-full mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+              </div>
+              <div className="lg:col-span-1">
+                <Skeleton className="h-80 w-full rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+  
+  if (error || !property) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -95,21 +204,6 @@ const PropertyDetail = () => {
               <CarouselPrevious className="left-2" />
               <CarouselNext className="right-2" />
             </Carousel>
-          </div>
-          
-          {/* Location Map */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Emplacement</h2>
-            <PropertyMap 
-              properties={[property]} 
-              selectedPropertyId={property.id}
-            />
-          </div>
-          
-          {/* Availability Calendar */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Disponibilité</h2>
-            <PropertyAvailability property={property} />
           </div>
           
           {/* Main content */}
@@ -191,73 +285,27 @@ const PropertyDetail = () => {
                   ))}
                 </div>
               </div>
+              
+              {/* Location Map */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-3">Emplacement</h3>
+                <PropertyMap 
+                  properties={[property]} 
+                  selectedPropertyId={property.id}
+                />
+              </div>
+              
+              {/* Availability Calendar */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-3">Disponibilité</h3>
+                <PropertyAvailability property={property} />
+              </div>
             </div>
             
             {/* Right column - Booking */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24 kabyle-card p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <span className="text-2xl font-bold">{property.price} €</span>
-                    <span className="text-gray-600"> / nuit</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mr-1" />
-                    <span className="font-medium">{property.rating}</span>
-                    <span className="text-gray-600 mx-1">·</span>
-                    <span className="text-gray-600">{property.reviewCount} avis</span>
-                  </div>
-                </div>
-                
-                {/* Date selection */}
-                <div className="mb-4 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="border rounded-lg p-3">
-                      <label className="text-xs text-gray-500 block">CHECK-IN</label>
-                      <div className="flex items-center pt-1">
-                        <Calendar className="h-4 w-4 text-kabyle-terracotta mr-2" />
-                        <span>Ajouter une date</span>
-                      </div>
-                    </div>
-                    <div className="border rounded-lg p-3">
-                      <label className="text-xs text-gray-500 block">CHECK-OUT</label>
-                      <div className="flex items-center pt-1">
-                        <Calendar className="h-4 w-4 text-kabyle-terracotta mr-2" />
-                        <span>Ajouter une date</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="border rounded-lg p-3">
-                    <label className="text-xs text-gray-500 block">VOYAGEURS</label>
-                    <div className="flex items-center pt-1">
-                      <Users className="h-4 w-4 text-kabyle-terracotta mr-2" />
-                      <span>1 voyageur</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Booking button */}
-                <Button className="w-full bg-kabyle-terracotta hover:bg-kabyle-terracotta/90 mb-4">
-                  Réserver
-                </Button>
-                
-                {/* Booking info */}
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="underline">{property.price} € x 5 nuits</span>
-                    <span>{property.price * 5} €</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="underline">Frais de service</span>
-                    <span>{Math.round(property.price * 5 * 0.12)} €</span>
-                  </div>
-                  <Separator className="my-3" />
-                  <div className="flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>{property.price * 5 + Math.round(property.price * 5 * 0.12)} €</span>
-                  </div>
-                </div>
+              <div className="sticky top-24">
+                <BookingRequestForm property={property} />
               </div>
             </div>
           </div>

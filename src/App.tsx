@@ -18,6 +18,8 @@ import CommunePage from "./pages/CommunePage";
 import PropertiesPage from "./pages/PropertiesPage";
 import PropertyManagement from "./pages/PropertyManagement";
 import PropertyAvailabilityManagement from "./pages/PropertyAvailabilityManagement";
+import BookingRequestsPage from "./pages/BookingRequestsPage";
+import BookingManagementPage from "./pages/BookingManagementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +53,11 @@ const App = () => (
                 <UserProfile />
               </ProtectedRoute>
             } />
+            <Route path="/my-bookings" element={
+              <ProtectedRoute>
+                <BookingRequestsPage />
+              </ProtectedRoute>
+            } />
             
             {/* Protected routes for proprietaire only */}
             <Route path="/host" element={
@@ -66,6 +73,11 @@ const App = () => (
             <Route path="/property-availability" element={
               <ProtectedRoute allowedRoles={["proprietaire"]}>
                 <PropertyAvailabilityManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/booking-management" element={
+              <ProtectedRoute allowedRoles={["proprietaire"]}>
+                <BookingManagementPage />
               </ProtectedRoute>
             } />
             

@@ -9,6 +9,53 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      booking_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          message: string | null
+          owner_id: string
+          property_id: string
+          requester_id: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          message?: string | null
+          owner_id: string
+          property_id: string
+          requester_id: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          message?: string | null
+          owner_id?: string
+          property_id?: string
+          requester_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_requests_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "guesthouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communes: {
         Row: {
           created_at: string | null
