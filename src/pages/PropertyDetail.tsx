@@ -166,6 +166,13 @@ const PropertyDetail = () => {
               <div className="flex items-center mt-2 text-gray-600">
                 <MapPin className="h-4 w-4 mr-1" />
                 <span>{property.location.village}, {property.location.wilaya}</span>
+                
+                {property.rating > 0 && (
+                  <div className="flex items-center ml-4">
+                    <Star className="h-4 w-4 mr-1 text-yellow-500 fill-yellow-500" />
+                    <span className="font-medium">{property.rating.toFixed(1)}</span>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -217,7 +224,10 @@ const PropertyDetail = () => {
                     Logement proposé par {property.host.name}
                   </h2>
                   <p className="text-gray-600">
-                    Langues: {property.host.languages.join(", ")}
+                    <span className="flex items-center mt-1">
+                      <Users className="h-4 w-4 mr-2" />
+                      Capacité: {property.features.find(f => f.includes('Capacité'))?.replace('Capacité: ', '') || 'Non spécifiée'}
+                    </span>
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-full overflow-hidden">
@@ -286,6 +296,12 @@ const PropertyDetail = () => {
                 </div>
               </div>
               
+              {/* Availability Calendar */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-3">Disponibilité</h3>
+                <PropertyAvailability property={property} />
+              </div>
+              
               {/* Location Map */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold mb-3">Emplacement</h3>
@@ -293,12 +309,6 @@ const PropertyDetail = () => {
                   properties={[property]} 
                   selectedPropertyId={property.id}
                 />
-              </div>
-              
-              {/* Availability Calendar */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-3">Disponibilité</h3>
-                <PropertyAvailability property={property} />
               </div>
             </div>
             

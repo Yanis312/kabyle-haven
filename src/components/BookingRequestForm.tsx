@@ -9,11 +9,12 @@ import { format, isAfter, isBefore, isValid, parse, startOfDay } from "date-fns"
 import { fr } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Calendar as CalendarIcon, CheckCircle } from "lucide-react";
+import { Loader2, AlertCircle, Calendar as CalendarIcon, CheckCircle, BellRing } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 interface BookingRequestFormProps {
   property: Property;
@@ -125,7 +126,14 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Demande de réservation</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          <span>Demande de réservation</span>
+          {property.price && (
+            <Badge variant="outline" className="text-lg font-semibold">
+              {formatCurrency(property.price)}/nuit
+            </Badge>
+          )}
+        </CardTitle>
         <CardDescription>
           Vérifiez la disponibilité et envoyez une demande au propriétaire
         </CardDescription>
@@ -144,15 +152,21 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertTitle>Demande envoyée</AlertTitle>
             <AlertDescription>
-              Votre demande de réservation a été envoyée au propriétaire. Vous recevrez une notification lorsqu'il aura répondu.
+              <p>Votre demande de réservation a été envoyée au propriétaire. Vous recevrez une notification lorsqu'il aura répondu.</p>
+              <p className="mt-2">Vous pouvez suivre l'état de votre demande dans <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/my-bookings")}>Mes réservations</Button>.</p>
             </AlertDescription>
           </Alert>
         ) : (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Dates de séjour</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Dates de séjour</label>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  <CalendarIcon className="mr-1 h-3 w-3" /> Disponible
+                </Badge>
+              </div>
               <p className="text-sm text-gray-500">
-                Disponible du{" "}
+                Ce logement est disponible du{" "}
                 <span className="font-medium">
                   {format(new Date(property.availability.startDate), "d MMMM yyyy", { locale: fr })}
                 </span>{" "}
@@ -230,7 +244,10 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
                 Envoi en cours...
               </>
             ) : (
-              "Envoyer ma demande"
+              <>
+                <BellRing className="mr-2 h-4 w-4" />
+                Envoyer ma demande
+              </>
             )}
           </Button>
         )}
