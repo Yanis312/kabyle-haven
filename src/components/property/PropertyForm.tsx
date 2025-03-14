@@ -8,11 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileInput } from "@/components/ui/file-input";
 import { Separator } from "@/components/ui/separator";
-import { X, ImagePlus, Loader2, Calendar, ArrowRight } from "lucide-react";
+import { X, ImagePlus, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import AvailabilityManager from "./AvailabilityManager";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { format, isAfter, startOfDay } from "date-fns";
+import { fr } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
+import { Check } from "lucide-react";
 
 // Define the interfaces at the top of the file
 export interface Wilaya {
@@ -77,8 +80,31 @@ const PropertyForm = ({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
-  const [activeTab, setActiveTab] = useState("details");
   const [formIsValid, setFormIsValid] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: undefined,
+    to: undefined
+  });
+  
+  // Parse existing availability from property
+  useEffect(() => {
+    if (property?.availability) {
+      try {
+        const availabilityData = typeof property.availability === 'string' 
+          ? JSON.parse(property.availability as string) 
+          : property.availability;
+          
+        if (availabilityData?.start_date && availabilityData?.end_date) {
+          setDateRange({
+            from: new Date(availabilityData.start_date),
+            to: new Date(availabilityData.end_date)
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing availability data:", error);
+      }
+    }
+  }, [property]);
   
   // Check form validity whenever form fields change
   useEffect(() => {
@@ -144,6 +170,7 @@ const PropertyForm = ({
     setSelectedCommune("");
     setUploadedFiles([]);
     setExistingImages([]);
+    setDateRange({ from: undefined, to: undefined });
   };
   
   const handleRemoveImage = async (url: string) => {
@@ -152,21 +179,22 @@ const PropertyForm = ({
     await onRemoveImage(url);
   };
 
-  const handleAvailabilityUpdated = () => {
-    // This will be called when availability is updated
-    toast.success("Disponibilité mise à jour");
-  };
-  
-  const handleNextClick = () => {
-    if (formIsValid) {
-      setActiveTab("availability");
-    } else {
-      toast.error("Veuillez remplir tous les champs obligatoires avant de continuer");
-    }
-  };
-  
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Create a custom event with all data including availability
+    const availabilityData = dateRange?.from && dateRange?.to 
+      ? {
+          start_date: format(dateRange.from, "yyyy-MM-dd"),
+          end_date: format(dateRange.to, "yyyy-MM-dd")
+        }
+      : null;
+    
+    // Attach the availability to the form element for access in the submit handler
+    const form = e.target as HTMLFormElement;
+    if (!form.dataset) form.dataset = {};
+    form.dataset.availability = availabilityData ? JSON.stringify(availabilityData) : '';
+    
     if (formIsValid) {
       onSubmit(e);
     } else {
@@ -176,197 +204,192 @@ const PropertyForm = ({
 
   return (
     <form onSubmit={handleSubmitClick} className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Détails du logement</TabsTrigger>
-          <TabsTrigger value="availability">Disponibilité</TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="property-name">Nom du logement *</Label>
+          <Input
+            id="property-name"
+            name="property-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Maison traditionnelle, Villa moderne, etc."
+            required
+          />
+        </div>
         
-        <TabsContent value="details" className="space-y-4 pt-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="property-name">Nom du logement *</Label>
-              <Input
-                id="property-name"
-                name="property-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Maison traditionnelle, Villa moderne, etc."
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="property-description">Description</Label>
-              <Textarea
-                id="property-description"
-                name="property-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Décrivez votre logement..."
-                rows={4}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="property-price">Prix par nuit (DA) *</Label>
-                <Input
-                  id="property-price"
-                  name="property-price"
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="5000"
-                  min="0"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="property-capacity">Capacité (personnes) *</Label>
-                <Input
-                  id="property-capacity"
-                  name="property-capacity"
-                  type="number"
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                  placeholder="4"
-                  min="1"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="property-wilaya">Wilaya *</Label>
-                <Select
-                  name="property-wilaya"
-                  value={selectedWilaya}
-                  onValueChange={setSelectedWilaya}
-                  required
-                >
-                  <SelectTrigger id="property-wilaya">
-                    <SelectValue placeholder="Sélectionner une wilaya" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {wilayas.map((wilaya) => (
-                      <SelectItem key={wilaya.id} value={wilaya.id.toString()}>
-                        {wilaya.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="property-commune">Commune *</Label>
-                <Select
-                  name="property-commune"
-                  value={selectedCommune}
-                  onValueChange={setSelectedCommune}
-                  disabled={!selectedWilaya || filteredCommunes.length === 0}
-                  required
-                >
-                  <SelectTrigger id="property-commune">
-                    <SelectValue placeholder={
-                      !selectedWilaya 
-                        ? "Sélectionnez d'abord une wilaya" 
-                        : filteredCommunes.length === 0 
-                          ? "Aucune commune disponible" 
-                          : "Sélectionner une commune"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredCommunes.map((commune) => (
-                      <SelectItem key={commune.id} value={commune.id.toString()}>
-                        {commune.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Images</Label>
-              <FileInput 
-                onFilesChange={setUploadedFiles}
-                selectedFiles={uploadedFiles}
-                urls={existingImages}
-                onRemoveUrl={handleRemoveImage}
-                maxFiles={5}
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="property-description">Description</Label>
+          <Textarea
+            id="property-description"
+            name="property-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Décrivez votre logement..."
+            rows={4}
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="property-price">Prix par nuit (DA) *</Label>
+            <Input
+              id="property-price"
+              name="property-price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="5000"
+              min="0"
+              required
+            />
           </div>
           
-          <div className="flex justify-end mt-4">
-            {!property ? (
-              <Button 
-                type="button" 
-                onClick={handleNextClick}
-                disabled={!formIsValid}
-                className="gap-2"
-              >
-                Suivant
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || isUploading || !formIsValid}
-              >
-                {isSubmitting || isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isUploading ? "Téléchargement des images..." : "Mise à jour..."}
-                  </>
-                ) : (
-                  "Mettre à jour"
-                )}
-              </Button>
-            )}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="availability" className="pt-4">
-          {property && property.id ? (
-            <AvailabilityManager 
-              property={property} 
-              onAvailabilityUpdated={handleAvailabilityUpdated}
+          <div className="space-y-2">
+            <Label htmlFor="property-capacity">Capacité (personnes) *</Label>
+            <Input
+              id="property-capacity"
+              name="property-capacity"
+              type="number"
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              placeholder="4"
+              min="1"
+              required
             />
-          ) : (
-            <div className="text-center p-6 bg-gray-50 border border-dashed border-gray-200 rounded-lg mb-6">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Définir la disponibilité</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Vous pourrez définir la disponibilité après avoir créé le logement.
-              </p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="property-wilaya">Wilaya *</Label>
+            <Select
+              name="property-wilaya"
+              value={selectedWilaya}
+              onValueChange={setSelectedWilaya}
+              required
+            >
+              <SelectTrigger id="property-wilaya">
+                <SelectValue placeholder="Sélectionner une wilaya" />
+              </SelectTrigger>
+              <SelectContent>
+                {wilayas.map((wilaya) => (
+                  <SelectItem key={wilaya.id} value={wilaya.id.toString()}>
+                    {wilaya.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="property-commune">Commune *</Label>
+            <Select
+              name="property-commune"
+              value={selectedCommune}
+              onValueChange={setSelectedCommune}
+              disabled={!selectedWilaya || filteredCommunes.length === 0}
+              required
+            >
+              <SelectTrigger id="property-commune">
+                <SelectValue placeholder={
+                  !selectedWilaya 
+                    ? "Sélectionnez d'abord une wilaya" 
+                    : filteredCommunes.length === 0 
+                      ? "Aucune commune disponible" 
+                      : "Sélectionner une commune"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredCommunes.map((commune) => (
+                  <SelectItem key={commune.id} value={commune.id.toString()}>
+                    {commune.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Images</Label>
+          <FileInput 
+            onFilesChange={setUploadedFiles}
+            selectedFiles={uploadedFiles}
+            urls={existingImages}
+            onRemoveUrl={handleRemoveImage}
+            maxFiles={5}
+          />
+        </div>
+
+        <Separator className="my-4" />
+        
+        <div className="space-y-2">
+          <Label>Disponibilité</Label>
+          <div className="space-y-4">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center justify-center gap-2 text-sm">
+                <div className="flex items-center">
+                  <div className="h-4 w-4 rounded-full bg-green-500 mr-1"></div>
+                  <span>Disponible</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="h-4 w-4 rounded-full bg-gray-300 mr-1"></div>
+                  <span>Non disponible</span>
+                </div>
+              </div>
+
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                defaultMonth={dateRange?.from || new Date()}
+                numberOfMonths={2}
+                locale={fr}
+                className="border rounded-md p-3"
+              />
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+
+            <div className="flex items-center justify-between pt-4">
+              <div>
+                {dateRange?.from && dateRange?.to && (
+                  <div className="text-sm">
+                    <span className="font-medium">Période sélectionnée:</span>{" "}
+                    <span className="text-green-600">
+                      {format(dateRange.from, "d MMMM yyyy", { locale: fr })} - {format(dateRange.to, "d MMMM yyyy", { locale: fr })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <Separator className="my-6" />
       
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" className="dialog-close">Annuler</Button>
-        {activeTab === "availability" && !property && (
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || isUploading || !formIsValid}
-          >
-            {isSubmitting || isUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {isUploading ? "Téléchargement des images..." : "Création..."}
-              </>
-            ) : (
-              "Créer"
-            )}
-          </Button>
-        )}
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || isUploading || !formIsValid}
+          className="gap-2"
+        >
+          {isSubmitting || isUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {isUploading 
+                ? "Téléchargement des images..." 
+                : property 
+                  ? "Mise à jour..." 
+                  : "Création..."}
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              {property ? "Mettre à jour" : "Créer"}
+            </>
+          )}
+        </Button>
       </div>
     </form>
   );

@@ -217,7 +217,17 @@ const PropertyManagement = () => {
       }
     });
     
-    console.log("Form values:", { name, price, capacity, selectedWilaya, selectedCommune });
+    // Get availability data from the dataset
+    let availability = null;
+    if (form.dataset.availability) {
+      try {
+        availability = JSON.parse(form.dataset.availability);
+      } catch (e) {
+        console.error("Error parsing availability data:", e);
+      }
+    }
+    
+    console.log("Form values:", { name, price, capacity, selectedWilaya, selectedCommune, availability });
     
     if (!name || !price || !capacity || !selectedWilaya || !selectedCommune) {
       toast.error("Veuillez remplir tous les champs obligatoires");
@@ -299,11 +309,13 @@ const PropertyManagement = () => {
         wilaya_id: parseInt(selectedWilaya),
         commune_id: parseInt(selectedCommune),
         owner_id: user.id,
-        images: allImages.length > 0 ? allImages : null
+        images: allImages.length > 0 ? allImages : null,
+        availability: availability
       };
       
       console.log("Saving property data:", propertyData);
       console.log("Images array being saved:", propertyData.images);
+      console.log("Availability being saved:", propertyData.availability);
       
       let result;
       
