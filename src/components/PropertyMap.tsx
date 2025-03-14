@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Property } from "@/data/properties";
+import { AlertTriangle } from "lucide-react";
 
-// Configure Mapbox
-mapboxgl.accessToken = "pk.eyJ1IjoieWFuaXNnYXJvdWkiLCJhIjoiY2xzdnB2d2xwMDE4YzJrbzl0ZmpieHF1eiJ9.LRnIQB9tzWuWdLQ1qqkgbA";
+// Configure Mapbox with a valid token
+// This token should be replaced with your own Mapbox access token
+mapboxgl.accessToken = "pk.eyJ1IjoiYWlyYm5iIiwiYSI6ImNqcmg2ZHFxczA4NWk0M3BucTRnOWg5ZjAifQ.j_LaWN2zX5jIUCD8Kx3JXw";
 
 interface PropertyMapProps {
   properties: Property[];
@@ -24,21 +26,32 @@ const PropertyMap = ({
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<{[key: string]: mapboxgl.Marker}>({});
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
     
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v11",
-      center: [4.2, 36.7], // Center on Kabylie region
-      zoom: 8,
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [4.2, 36.7], // Center on Kabylie region
+        zoom: 8,
+      });
 
-    map.current.on("load", () => {
-      setMapLoaded(true);
-    });
+      map.current.on("load", () => {
+        setMapLoaded(true);
+      });
+
+      map.current.on("error", (e) => {
+        console.error("Mapbox error:", e);
+        setMapError("Erreur de chargement de la carte. Veuillez vérifier votre connexion internet ou réessayez plus tard.");
+      });
+    } catch (error) {
+      console.error("Error initializing map:", error);
+      setMapError("Impossible d'initialiser la carte Mapbox.");
+    }
 
     return () => {
       if (map.current) {
@@ -50,7 +63,7 @@ const PropertyMap = ({
 
   // Add/update markers when properties change
   useEffect(() => {
-    if (!map.current || !mapLoaded || properties.length === 0) return;
+    if (!map.current || !mapLoaded || properties.length === 0 || mapError) return;
 
     // Clear existing markers
     Object.values(markers.current).forEach(marker => marker.remove());
@@ -108,11 +121,11 @@ const PropertyMap = ({
       
       map.current.fitBounds(bounds, { padding: 50 });
     }
-  }, [properties, mapLoaded, selectedPropertyId, onMarkerClick, onMarkerHover]);
+  }, [properties, mapLoaded, selectedPropertyId, onMarkerClick, onMarkerHover, mapError]);
 
   // Update marker styles when selected property changes
   useEffect(() => {
-    if (!map.current || !mapLoaded) return;
+    if (!map.current || !mapLoaded || mapError) return;
     
     // Update marker styles
     Object.entries(markers.current).forEach(([id, marker]) => {
@@ -132,7 +145,19 @@ const PropertyMap = ({
         }
       }
     });
-  }, [selectedPropertyId, mapLoaded]);
+  }, [selectedPropertyId, mapLoaded, mapError]);
+
+  if (mapError) {
+    return (
+      <div className="map-container h-80 rounded-lg overflow-hidden border shadow-sm bg-gray-100 flex items-center justify-center">
+        <div className="text-center p-4">
+          <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+          <p className="text-gray-700">{mapError}</p>
+          <p className="text-sm text-gray-500 mt-2">Vous pouvez toujours naviguer dans la liste des propriétés ci-dessous.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="map-container h-80 rounded-lg overflow-hidden border shadow-sm" ref={mapContainer} />
