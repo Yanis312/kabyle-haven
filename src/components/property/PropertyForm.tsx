@@ -1,52 +1,55 @@
-
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileInput } from "@/components/ui/file-input";
+import { X, ImagePlus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Wilaya {
-  id: number;
+  id: string;
   name: string;
+  code: string;
 }
 
 interface Commune {
-  id: number;
+  id: string;
   name: string;
-  wilaya_id: number;
+  wilaya_id: string;
 }
 
 export interface Property {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   description?: string;
-  price: number;
-  capacity: number;
-  wilaya_id: number;
-  commune_id: number;
+  price?: number;
+  capacity?: number;
+  wilaya_id?: number;
+  commune_id?: number;
   owner_id?: string;
   images?: string[] | null;
   rating?: number;
   created_at?: string;
   updated_at?: string;
-  availability?: any; // JSONB data for availability
+  availability?: any; // Ajout de la propriété availability
 }
 
-interface PropertyFormProps {
-  editingProperty: Property | null;
+export interface PropertyFormProps {
+  property?: Property;
   wilayas: Wilaya[];
   communes: Commune[];
   isSubmitting: boolean;
   isUploading: boolean;
   onSubmit: (e: React.FormEvent) => void;
-  onRemoveImage: (url: string) => Promise<void>;
+  onRemoveImage: (url: string) => void;
 }
 
 const PropertyForm = ({
-  editingProperty,
+  property,
   wilayas,
   communes,
   isSubmitting,
@@ -54,10 +57,10 @@ const PropertyForm = ({
   onSubmit,
   onRemoveImage
 }: PropertyFormProps) => {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [capacity, setCapacity] = useState("");
+  const [name, setName] = useState(property?.name || "");
+  const [description, setDescription] = useState(property?.description || "");
+  const [price, setPrice] = useState(property?.price || "");
+  const [capacity, setCapacity] = useState(property?.capacity || "");
   const [selectedWilaya, setSelectedWilaya] = useState<string>("");
   const [selectedCommune, setSelectedCommune] = useState<string>("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -65,31 +68,31 @@ const PropertyForm = ({
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
   
   useEffect(() => {
-    if (editingProperty) {
-      setName(editingProperty.name);
-      setDescription(editingProperty.description || "");
-      setPrice(editingProperty.price.toString());
-      setCapacity(editingProperty.capacity.toString());
+    if (property) {
+      setName(property.name);
+      setDescription(property.description || "");
+      setPrice(property.price);
+      setCapacity(property.capacity);
       
-      if (editingProperty.images && Array.isArray(editingProperty.images)) {
-        console.log("Setting existing images from property:", editingProperty.images);
-        setExistingImages(editingProperty.images);
+      if (property.images && Array.isArray(property.images)) {
+        console.log("Setting existing images from property:", property.images);
+        setExistingImages(property.images);
       } else {
-        console.log("No images in property or not an array:", editingProperty.images);
+        console.log("No images in property or not an array:", property.images);
         setExistingImages([]);
       }
       
-      if (editingProperty.wilaya_id) {
-        setSelectedWilaya(editingProperty.wilaya_id.toString());
+      if (property.wilaya_id) {
+        setSelectedWilaya(property.wilaya_id.toString());
       }
       
-      if (editingProperty.commune_id) {
-        setSelectedCommune(editingProperty.commune_id.toString());
+      if (property.commune_id) {
+        setSelectedCommune(property.commune_id.toString());
       }
     } else {
       resetForm();
     }
-  }, [editingProperty]);
+  }, [property]);
   
   useEffect(() => {
     if (selectedWilaya) {
@@ -262,10 +265,10 @@ const PropertyForm = ({
           {isSubmitting || isUploading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {isUploading ? "Téléchargement des images..." : (editingProperty ? "Mise à jour..." : "Création...")}
+              {isUploading ? "Téléchargement des images..." : (property ? "Mise à jour..." : "Création...")}
             </>
           ) : (
-            editingProperty ? "Mettre à jour" : "Créer"
+            property ? "Mettre à jour" : "Créer"
           )}
         </Button>
       </div>
