@@ -22,10 +22,9 @@ import {
   Calendar,
   CirclePlus,
   Sun,
-  Moon
+  Moon,
+  Search
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { useTheme } from "next-themes";
 
 // Create a simple ModeToggle component to replace the import
@@ -52,7 +51,6 @@ function ModeToggle() {
 export default function Navbar() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -61,35 +59,31 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
-      <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-        <Link to="/" className="hidden font-bold sm:block">
-          <span className="text-2xl">
-            ⵣ<span>StayZen</span>
-          </span>
-        </Link>
-        <div className="w-full flex-1 sm:w-auto">
-          <Command className="rounded-lg border shadow-sm">
-            <CommandInput placeholder="Rechercher un logement..." />
-            <CommandList>
-              <CommandEmpty>Aucun résultat.</CommandEmpty>
-              <CommandGroup heading="Suggestions">
-                <CommandItem>Logement 1</CommandItem>
-                <CommandItem>Logement 2</CommandItem>
-                <CommandItem>Logement 3</CommandItem>
-              </CommandGroup>
-              <CommandSeparator />
-              <CommandGroup heading="Aide">
-                <CommandItem>
-                  Rechercher un logement par ville, région...
-                </CommandItem>
-              </CommandGroup>
-            </CommandList>
-          </Command>
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center">
+          <Link to="/" className="font-bold">
+            <span className="text-2xl">
+              ⵣ<span>StayZen</span>
+            </span>
+          </Link>
         </div>
+
+        <div className="hidden md:flex flex-1 max-w-md mx-4">
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <input 
+              type="search" 
+              placeholder="Rechercher un logement..." 
+              className="w-full pl-10 py-2 border rounded-full bg-background text-sm"
+            />
+          </div>
+        </div>
+        
         <div className="flex items-center space-x-2">
           <ModeToggle />
           
-          {/* Update the menu items in the dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="relative h-10 w-10 rounded-full">
@@ -127,7 +121,6 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   
-                  {/* Add booking links based on user role */}
                   {profile?.role === 'proprietaire' ? (
                     <>
                       <DropdownMenuItem asChild>

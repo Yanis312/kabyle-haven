@@ -7,11 +7,13 @@ import PropertyGrid from "@/components/PropertyGrid";
 
 const Index = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <Hero />
-      <PropertyGrid />
-      <CulturalSection />
+      <main className="flex-grow">
+        <Hero />
+        <PropertyGrid />
+        <CulturalSection />
+      </main>
       <Footer />
     </div>
   );
