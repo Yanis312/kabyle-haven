@@ -46,6 +46,7 @@ export type Database = {
       }
       guesthouses: {
         Row: {
+          availability: Json | null
           capacity: number
           commune_id: number | null
           created_at: string | null
@@ -60,6 +61,7 @@ export type Database = {
           wilaya_id: number | null
         }
         Insert: {
+          availability?: Json | null
           capacity: number
           commune_id?: number | null
           created_at?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           wilaya_id?: number | null
         }
         Update: {
+          availability?: Json | null
           capacity?: number
           commune_id?: number | null
           created_at?: string | null

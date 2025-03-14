@@ -11,6 +11,7 @@ import { CalendarRange, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Property } from "./PropertyForm";
+import { DateRange } from "react-day-picker";
 
 interface AvailabilityManagerProps {
   property: Property;
@@ -24,10 +25,7 @@ interface AvailabilityData {
 
 export default function AvailabilityManager({ property, onAvailabilityUpdated }: AvailabilityManagerProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined
   });
@@ -58,7 +56,7 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
       return;
     }
     
-    if (isAfter(startOfDay(dateRange.from), startOfDay(dateRange.to))) {
+    if (isAfter(startOfDay(dateRange.from), startOfDay(dateRange.to!))) {
       toast.error("La date de début doit être avant la date de fin");
       return;
     }
@@ -141,7 +139,7 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
           <Calendar
             mode="range"
             selected={dateRange}
-            onSelect={setDateRange}
+            onSelect={(range) => setDateRange(range || { from: undefined, to: undefined })}
             defaultMonth={dateRange.from || new Date()}
             numberOfMonths={2}
             locale={fr}

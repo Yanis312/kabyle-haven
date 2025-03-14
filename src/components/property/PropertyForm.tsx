@@ -31,6 +31,7 @@ interface Property {
   rating?: number;
   created_at?: string;
   updated_at?: string;
+  availability?: any; // JSONB data for availability
 }
 
 interface PropertyFormProps {
