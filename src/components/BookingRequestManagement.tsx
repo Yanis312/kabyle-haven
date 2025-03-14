@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CheckCircle2, XCircle, AlertCircle, Info } from "lucide-react";
+import { Calendar, CheckCircle2, XCircle, AlertCircle, Info, Bell } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -57,12 +57,46 @@ export default function BookingRequestManagement() {
   const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [newRequestsCount, setNewRequestsCount] = useState(0);
 
   useEffect(() => {
     if (user) {
       fetchBookingRequests();
+      setupRealtimeSubscription();
     }
   }, [user]);
+
+  // Set up realtime subscription for new booking requests
+  const setupRealtimeSubscription = () => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('booking-requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'booking_requests',
+          filter: `owner_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New booking request received:', payload);
+          toast.info("Nouvelle demande de réservation reçue", {
+            action: {
+              label: "Voir",
+              onClick: () => fetchBookingRequests()
+            }
+          });
+          setNewRequestsCount(prev => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   // Fetch booking requests for this owner
   const fetchBookingRequests = async () => {
@@ -83,6 +117,7 @@ export default function BookingRequestManagement() {
       
       console.log("Fetched booking requests:", data);
       setBookingRequests(data || []);
+      setNewRequestsCount(0); // Reset counter after fetching
     } catch (err: any) {
       console.error("Error fetching booking requests:", err);
       setError(err.message);
@@ -212,13 +247,26 @@ export default function BookingRequestManagement() {
     );
   }
 
+  const pendingRequestsCount = bookingRequests.filter(req => req.status === "pending").length;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold">Demandes de réservation</h2>
-        <div>
-          <Badge className="mb-2 ml-2">
-            {bookingRequests.filter(req => req.status === "pending").length} en attente
+        <div className="flex items-center">
+          {newRequestsCount > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={fetchBookingRequests}
+              className="flex items-center mr-3"
+            >
+              <Bell className="mr-2 h-4 w-4 animate-pulse text-amber-500" />
+              <span>Rafraîchir</span>
+              <Badge className="ml-2 bg-amber-500">{newRequestsCount}</Badge>
+            </Button>
+          )}
+          <Badge className="bg-amber-500 text-white">
+            {pendingRequestsCount} en attente
           </Badge>
         </div>
       </div>

@@ -32,16 +32,16 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
 
   // Check if property has availability data
   const hasAvailability = property.availability && 
-    property.availability.start_date &&
-    property.availability.end_date;
+    property.availability.startDate &&
+    property.availability.endDate;
 
   // Check if dates are available
   const areDatesAvailable = () => {
     if (!dateRange?.from || !dateRange?.to || !hasAvailability) return false;
     
     // Properly access the nested availability object
-    const availableStart = new Date(property.availability.start_date);
-    const availableEnd = new Date(property.availability.end_date);
+    const availableStart = new Date(property.availability.startDate);
+    const availableEnd = new Date(property.availability.endDate);
     
     return (
       !isBefore(dateRange.from, availableStart) &&
@@ -169,11 +169,11 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
               <p className="text-sm text-gray-500">
                 Ce logement est disponible du{" "}
                 <span className="font-medium">
-                  {format(new Date(property.availability.start_date), "d MMMM yyyy", { locale: fr })}
+                  {format(new Date(property.availability.startDate), "d MMMM yyyy", { locale: fr })}
                 </span>{" "}
                 au{" "}
                 <span className="font-medium">
-                  {format(new Date(property.availability.end_date), "d MMMM yyyy", { locale: fr })}
+                  {format(new Date(property.availability.endDate), "d MMMM yyyy", { locale: fr })}
                 </span>
               </p>
               <Calendar
@@ -183,8 +183,8 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
                 className="mx-auto border rounded-md"
                 disabled={[
                   {
-                    before: new Date(property.availability.start_date),
-                    after: new Date(property.availability.end_date)
+                    before: new Date(property.availability.startDate),
+                    after: new Date(property.availability.endDate)
                   }
                 ]}
                 locale={fr}
