@@ -1,148 +1,107 @@
 
-import { ImageIcon, Edit, Trash2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Property, Wilaya, Commune } from "./PropertyForm";
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { MapPin, Star } from "lucide-react";
+import { Property } from "@/data/properties";
 
 interface PropertyCardProps {
   property: Property;
-  wilayas: Wilaya[];
-  communes: Commune[];
-  onEdit: (property: Property) => void;
-  onDelete: (id: string) => void;
-  isDeleting: boolean;
+  onHover?: () => void;
 }
 
-const PropertyCard = ({
-  property,
-  wilayas,
-  communes,
-  onEdit,
-  onDelete,
-  isDeleting,
-}: PropertyCardProps) => {
-  const [imageError, setImageError] = useState(false);
+const PropertyCard = ({ property, onHover }: PropertyCardProps) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
-  const getCommune = (id: number | null | undefined) => {
-    if (!id) return "Non spécifié";
-    // Convertir l'id en nombre pour la comparaison
-    const commune = communes.find(c => Number(c.id) === id);
-    return commune ? commune.name : "Non spécifié";
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === property.images.length - 1 ? 0 : prev + 1
+    );
   };
   
-  const getWilaya = (id: number | null | undefined) => {
-    if (!id) return "Non spécifié";
-    // Convertir l'id en nombre pour la comparaison
-    const wilaya = wilayas.find(w => Number(w.id) === id);
-    return wilaya ? wilaya.name : "Non spécifié";
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? property.images.length - 1 : prev - 1
+    );
   };
-
-  // Ensure property.images is an array or set to empty array if null
-  const images = property.images && Array.isArray(property.images) ? property.images : [];
-  
-  console.log(`PropertyCard: Property ${property.id} has ${images.length} images:`, images);
-
-  const mainImage = images.length > 0 ? images[0] : null;
 
   return (
-    <Card className="overflow-hidden">
-      <div className="aspect-video bg-gray-100 relative">
-        {mainImage && !imageError ? (
+    <div 
+      className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+      onMouseEnter={onHover}
+    >
+      <Link to={`/property/${property.id}`}>
+        <div className="relative aspect-[4/3] overflow-hidden">
           <img 
-            src={mainImage} 
-            alt={property.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              console.error("Image failed to load:", mainImage);
-              setImageError(true);
-            }}
+            src={property.images[currentImageIndex]} 
+            alt={property.title} 
+            className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
           />
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <ImageIcon className="h-12 w-12" />
-            {imageError && <p className="text-xs mt-2">L'image n'a pas pu être chargée</p>}
-          </div>
-        )}
-      </div>
-      
-      <CardHeader>
-        <CardTitle className="line-clamp-1">{property.name}</CardTitle>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="space-y-2">
-          <p className="text-sm text-gray-500 line-clamp-2">
-            {property.description || "Aucune description"}
-          </p>
           
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="font-medium">Prix:</span>{" "}
-              {new Intl.NumberFormat('fr-FR').format(property.price)} DA
-            </div>
-            <div>
-              <span className="font-medium">Capacité:</span>{" "}
-              {property.capacity} personnes
-            </div>
-            <div>
-              <span className="font-medium">Wilaya:</span>{" "}
-              {getWilaya(property.wilaya_id)}
-            </div>
-            <div>
-              <span className="font-medium">Commune:</span>{" "}
-              {getCommune(property.commune_id)}
-            </div>
-          </div>
-          
-          {images.length > 1 && (
-            <div className="flex gap-1 mt-2 overflow-x-auto pb-1">
-              {images.slice(1, 4).map((img, idx) => (
-                <div key={idx} className="relative h-12 w-12 rounded overflow-hidden">
-                  <img 
-                    src={img} 
-                    alt={`${property.name} image ${idx + 2}`}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      console.error("Thumbnail failed to load:", img);
-                      (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Error";
-                    }}
-                  />
-                </div>
-              ))}
-              {images.length > 4 && (
-                <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">
-                  +{images.length - 4}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-      
-      <CardFooter className="flex justify-between">
-        <Button 
-          variant="outline" 
-          onClick={() => onEdit(property)}
-        >
-          <Edit className="h-4 w-4 mr-2" /> Modifier
-        </Button>
-        
-        <Button 
-          variant="destructive" 
-          onClick={() => onDelete(property.id)}
-          disabled={isDeleting}
-        >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
+          {property.images.length > 1 && (
             <>
-              <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+              <button 
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1 opacity-70 hover:opacity-100"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  prevImage();
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button 
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1 opacity-70 hover:opacity-100"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextImage();
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </>
           )}
-        </Button>
-      </CardFooter>
-    </Card>
+          
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent text-white p-2">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-1" />
+              <span className="text-sm">{property.location.village}, {property.location.wilaya}</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+      
+      <div className="p-4">
+        <Link to={`/property/${property.id}`}>
+          <h3 className="font-bold text-lg mb-2 hover:text-kabyle-blue truncate">{property.title}</h3>
+        </Link>
+        
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center">
+            <Star className="h-4 w-4 text-amber-500 mr-1" />
+            <span className="text-sm font-medium">{property.rating} ({property.reviewCount} avis)</span>
+          </div>
+          <span className="font-bold text-lg">{property.price} DA<span className="text-sm font-normal text-gray-600">/nuit</span></span>
+        </div>
+        
+        <div className="flex flex-wrap gap-1 mt-2">
+          {property.features.slice(0, 3).map((feature, index) => (
+            <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-800">
+              {feature}
+            </span>
+          ))}
+          {property.features.length > 3 && (
+            <span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-800">
+              +{property.features.length - 3}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

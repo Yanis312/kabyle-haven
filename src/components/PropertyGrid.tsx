@@ -1,7 +1,6 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import PropertyCard from "./PropertyCard";
+import PropertyCard from "./property/PropertyCard";
 import PropertyMap from "./PropertyMap";
 import LocationFilter from "./LocationFilter";
 import properties from "@/data/properties";
@@ -19,7 +18,6 @@ const PropertyGrid = () => {
   const wilayaFilter = searchParams.get('wilaya');
   const communeFilter = searchParams.get('commune');
   
-  // Handle wilaya selection
   const handleWilayaChange = useCallback((wilayaId: string | null) => {
     const newParams = new URLSearchParams(searchParams);
     
@@ -29,13 +27,11 @@ const PropertyGrid = () => {
       newParams.delete('wilaya');
     }
     
-    // Clear commune when wilaya changes
     newParams.delete('commune');
     
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
   
-  // Handle commune selection
   const handleCommuneChange = useCallback((communeId: string | null) => {
     const newParams = new URLSearchParams(searchParams);
     
@@ -48,7 +44,6 @@ const PropertyGrid = () => {
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
   
-  // Apply regional filters
   useEffect(() => {
     let filtered = [...properties];
     
@@ -60,19 +55,13 @@ const PropertyGrid = () => {
       );
     }
     
-    // Apply wilaya filter
     if (wilayaFilter) {
-      // In a real implementation, we would query wilaya names from database
-      // For now, we'll just filter by exact match with the wilaya in location
       filtered = filtered.filter(
         property => property.location.wilaya.toLowerCase() === 'tizi ouzou'
       );
     }
     
-    // Apply commune filter
     if (communeFilter) {
-      // In a real implementation, we would query commune names from database
-      // For now, we'll just filter by exact match with the village in location
       filtered = filtered.filter(
         property => property.location.village.toLowerCase() === 'ath yenni'
       );
@@ -82,23 +71,19 @@ const PropertyGrid = () => {
     setClearFilters(false);
   }, [regionFilter, wilayaFilter, communeFilter]);
   
-  // Handle marker click
   const handleMarkerClick = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     
-    // Scroll to the corresponding property card
     const element = document.getElementById(`property-${propertyId}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
   
-  // Handle marker hover
   const handleMarkerHover = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
   };
   
-  // Handle property card hover
   const handlePropertyHover = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
   };
@@ -211,7 +196,8 @@ const PropertyGrid = () => {
                   onMouseEnter={() => handlePropertyHover(property.id)}
                 >
                   <PropertyCard 
-                    property={property} 
+                    property={property}
+                    onHover={() => handlePropertyHover(property.id)} 
                   />
                 </div>
               ))}
