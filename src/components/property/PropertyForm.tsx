@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ import { fr } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { Check } from "lucide-react";
 
-// Define the interfaces at the top of the file
 export interface Wilaya {
   id: number;
   name: string;
@@ -86,7 +84,6 @@ const PropertyForm = ({
     to: undefined
   });
   
-  // Parse existing availability from property
   useEffect(() => {
     if (property?.availability) {
       try {
@@ -106,7 +103,6 @@ const PropertyForm = ({
     }
   }, [property]);
   
-  // Check form validity whenever form fields change
   useEffect(() => {
     const isValid = 
       name.trim() !== "" && 
@@ -182,7 +178,6 @@ const PropertyForm = ({
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create a custom event with all data including availability
     const availabilityData = dateRange?.from && dateRange?.to 
       ? {
           start_date: format(dateRange.from, "yyyy-MM-dd"),
@@ -190,10 +185,10 @@ const PropertyForm = ({
         }
       : null;
     
-    // Attach the availability to the form element for access in the submit handler
-    const form = e.target as HTMLFormElement;
-    if (!form.dataset) form.dataset = {};
-    form.dataset.availability = availabilityData ? JSON.stringify(availabilityData) : '';
+    const availabilityInput = document.getElementById('availability-data') as HTMLInputElement;
+    if (availabilityInput) {
+      availabilityInput.value = availabilityData ? JSON.stringify(availabilityData) : '';
+    }
     
     if (formIsValid) {
       onSubmit(e);
@@ -204,6 +199,16 @@ const PropertyForm = ({
 
   return (
     <form onSubmit={handleSubmitClick} className="space-y-4">
+      <input 
+        type="hidden" 
+        id="availability-data" 
+        name="availability-data" 
+        value={dateRange?.from && dateRange?.to ? JSON.stringify({
+          start_date: format(dateRange.from, "yyyy-MM-dd"),
+          end_date: format(dateRange.to, "yyyy-MM-dd")
+        }) : ''}
+      />
+      
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label htmlFor="property-name">Nom du logement *</Label>

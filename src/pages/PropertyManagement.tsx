@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -153,11 +152,10 @@ const PropertyManagement = () => {
       
       if (wilayaError) throw wilayaError;
       
-      // Transform the data to match our Wilaya interface
       const transformedWilayas: Wilaya[] = (wilayaData || []).map(wilaya => ({
         id: wilaya.id,
         name: wilaya.name,
-        code: wilaya.id.toString(), // Utiliser id comme code puisqu'il est requis par notre interface
+        code: wilaya.id.toString(),
         name_ar: wilaya.name_ar,
         name_en: wilaya.name_en,
         created_at: wilaya.created_at
@@ -172,9 +170,8 @@ const PropertyManagement = () => {
       
       if (communeError) throw communeError;
       
-      // Transform the data to match our Commune interface
       const transformedCommunes: Commune[] = (communeData || []).map(commune => ({
-        id: commune.id.toString(), // Convertir id en string comme requis par notre interface
+        id: commune.id.toString(),
         name: commune.name,
         wilaya_id: commune.wilaya_id,
         name_ar: commune.name_ar,
@@ -217,11 +214,11 @@ const PropertyManagement = () => {
       }
     });
     
-    // Get availability data from the dataset
+    const availabilityInput = form.querySelector<HTMLInputElement>('#availability-data');
     let availability = null;
-    if (form.dataset.availability) {
+    if (availabilityInput && availabilityInput.value) {
       try {
-        availability = JSON.parse(form.dataset.availability);
+        availability = JSON.parse(availabilityInput.value);
       } catch (e) {
         console.error("Error parsing availability data:", e);
       }
