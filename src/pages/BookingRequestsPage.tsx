@@ -25,13 +25,12 @@ interface BookingRequest {
   message?: string;
   created_at: string;
   updated_at: string;
-  guesthouses: {
+  property_details?: {
+    id: string;
     name: string;
-    commune_id: number;
+    commune_name?: string;
+    wilaya_name?: string;
   };
-  // These properties might be nullable
-  commune_name?: string;
-  wilaya_name?: string;
 }
 
 // Helper function to format dates
@@ -67,52 +66,84 @@ export default function BookingRequestsPage() {
     try {
       setLoading(true);
       
-      // Perform query with proper table joins
-      const { data, error } = await supabase
+      // Fetch booking requests directly without joins
+      const { data: requestsData, error: requestsError } = await supabase
         .from("booking_requests")
-        .select(`
-          *,
-          guesthouses(name, commune_id)
-        `)
+        .select("*")
         .eq("requester_id", user?.id)
         .order("created_at", { ascending: false });
       
-      if (error) throw error;
+      if (requestsError) throw requestsError;
       
-      // Fetch commune and wilaya information separately
-      const enhancedData = await Promise.all((data || []).map(async (request) => {
-        // Get commune information
-        if (request.guesthouses && request.guesthouses.commune_id) {
-          const { data: communeData } = await supabase
-            .from("communes")
-            .select("name, wilaya_id")
-            .eq("id", request.guesthouses.commune_id)
+      if (!requestsData || requestsData.length === 0) {
+        setBookingRequests([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Enhance booking requests with property information
+      const enhancedRequests = await Promise.all(requestsData.map(async (request) => {
+        try {
+          // Get property information
+          const { data: propertyData, error: propertyError } = await supabase
+            .from("guesthouses")
+            .select("id, name, commune_id")
+            .eq("id", request.property_id)
             .single();
           
+          if (propertyError) throw propertyError;
+          
+          let communeName = null;
           let wilayaName = null;
           
-          // Get wilaya information if commune was found
-          if (communeData && communeData.wilaya_id) {
-            const { data: wilayaData } = await supabase
-              .from("wilayas")
-              .select("name")
-              .eq("id", communeData.wilaya_id)
+          // Get commune information
+          if (propertyData && propertyData.commune_id) {
+            const { data: communeData, error: communeError } = await supabase
+              .from("communes")
+              .select("name, wilaya_id")
+              .eq("id", propertyData.commune_id)
               .single();
+            
+            if (communeError) throw communeError;
+            
+            communeName = communeData?.name;
+            
+            // Get wilaya information
+            if (communeData && communeData.wilaya_id) {
+              const { data: wilayaData, error: wilayaError } = await supabase
+                .from("wilayas")
+                .select("name")
+                .eq("id", communeData.wilaya_id)
+                .single();
+                
+              if (wilayaError) throw wilayaError;
               
-            wilayaName = wilayaData?.name;
+              wilayaName = wilayaData?.name;
+            }
           }
           
           return {
             ...request,
-            commune_name: communeData?.name,
-            wilaya_name: wilayaName
+            property_details: {
+              id: propertyData.id,
+              name: propertyData.name,
+              commune_name: communeName,
+              wilaya_name: wilayaName
+            }
+          };
+        } catch (err) {
+          console.error("Error fetching property details:", err);
+          return {
+            ...request,
+            property_details: {
+              id: request.property_id,
+              name: "Propriété inconnue"
+            }
           };
         }
-        
-        return request;
       }));
       
-      setBookingRequests(enhancedData);
+      setBookingRequests(enhancedRequests);
     } catch (err: any) {
       console.error("Error fetching booking requests:", err);
       toast.error("Erreur lors du chargement des demandes de réservation");
@@ -161,11 +192,11 @@ export default function BookingRequestsPage() {
                   <CardHeader>
                     <div className="flex justify-between">
                       <div>
-                        <CardTitle>{request.guesthouses.name}</CardTitle>
+                        <CardTitle>{request.property_details?.name || "Propriété"}</CardTitle>
                         <CardDescription className="flex items-center mt-1">
                           <MapPin className="h-3 w-3 mr-1" />
-                          {request.commune_name && request.wilaya_name
-                            ? `${request.commune_name}, ${request.wilaya_name}`
+                          {request.property_details?.commune_name && request.property_details?.wilaya_name
+                            ? `${request.property_details.commune_name}, ${request.property_details.wilaya_name}`
                             : "Localisation non spécifiée"}
                         </CardDescription>
                       </div>
