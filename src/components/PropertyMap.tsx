@@ -135,7 +135,9 @@ const PropertyMap = ({
         el.className = "property-marker selected";
         el.querySelector("div")?.classList.add("border-kabyle-blue");
         el.querySelector("div")?.classList.remove("border-kabyle-terracotta");
-        marker.togglePopup();
+        if (!marker.getPopup().isOpen()) {
+          marker.togglePopup();
+        }
       } else {
         el.className = "property-marker";
         el.querySelector("div")?.classList.remove("border-kabyle-blue");

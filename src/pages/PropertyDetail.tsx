@@ -8,12 +8,20 @@ import { Calendar, Heart, MapPin, Star, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious
+} from "@/components/ui/carousel";
+import PropertyMap from "@/components/PropertyMap";
+import PropertyAvailability from "@/components/PropertyAvailability";
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [property, setProperty] = useState<Property | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [activeImage, setActiveImage] = useState(0);
   
   useEffect(() => {
     if (id) {
@@ -68,34 +76,40 @@ const PropertyDetail = () => {
             </div>
           </div>
           
-          {/* Image gallery */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-            <div className="lg:col-span-1 aspect-[4/3] rounded-lg overflow-hidden">
-              <img 
-                src={property.images[activeImage]} 
-                alt={property.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            <div className="lg:col-span-1 grid grid-cols-2 gap-4">
-              {property.images.slice(0, 4).map((image, index) => (
-                <div 
-                  key={index}
-                  className={cn(
-                    "aspect-square rounded-lg overflow-hidden cursor-pointer",
-                    activeImage === index && "ring-2 ring-kabyle-terracotta"
-                  )}
-                  onClick={() => setActiveImage(index)}
-                >
-                  <img 
-                    src={image} 
-                    alt={`${property.title} - image ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+          {/* Image carousel gallery */}
+          <div className="mb-8">
+            <Carousel className="w-full">
+              <CarouselContent>
+                {property.images.map((image, index) => (
+                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                    <div className="aspect-[4/3] rounded-lg overflow-hidden">
+                      <img 
+                        src={image} 
+                        alt={`${property.title} - image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-2" />
+              <CarouselNext className="right-2" />
+            </Carousel>
+          </div>
+          
+          {/* Location Map */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Emplacement</h2>
+            <PropertyMap 
+              properties={[property]} 
+              selectedPropertyId={property.id}
+            />
+          </div>
+          
+          {/* Availability Calendar */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Disponibilité</h2>
+            <PropertyAvailability property={property} />
           </div>
           
           {/* Main content */}

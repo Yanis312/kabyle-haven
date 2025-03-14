@@ -17,6 +17,7 @@ import WilayasPage from "./pages/WilayasPage";
 import CommunePage from "./pages/CommunePage";
 import PropertiesPage from "./pages/PropertiesPage";
 import PropertyManagement from "./pages/PropertyManagement";
+import PropertyAvailabilityManagement from "./pages/PropertyAvailabilityManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +61,11 @@ const App = () => (
             <Route path="/property-management" element={
               <ProtectedRoute allowedRoles={["proprietaire"]}>
                 <PropertyManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/property-availability" element={
+              <ProtectedRoute allowedRoles={["proprietaire"]}>
+                <PropertyAvailabilityManagement />
               </ProtectedRoute>
             } />
             
