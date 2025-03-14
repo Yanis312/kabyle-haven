@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,20 +20,42 @@ import {
   UserCircle,
   Home,
   Calendar,
-  CirclePlus
+  CirclePlus,
+  Sun,
+  Moon
 } from "lucide-react";
-import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { useTheme } from "next-themes";
+
+// Create a simple ModeToggle component to replace the import
+function ModeToggle() {
+  const { setTheme, theme } = useTheme();
+  
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+    >
+      {theme === "dark" ? (
+        <Sun className="h-[1.2rem] w-[1.2rem]" />
+      ) : (
+        <Moon className="h-[1.2rem] w-[1.2rem]" />
+      )}
+      <span className="sr-only">Toggle theme</span>
+    </Button>
+  );
+}
 
 // Update the Navbar component to add booking links
 export default function Navbar() {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     navigate("/auth");
   };
 
@@ -74,7 +97,7 @@ export default function Navbar() {
                   {user ? (
                     <>
                       <AvatarImage 
-                        src={user.profilePictureUrl} 
+                        src="" 
                         alt={`${profile?.first_name || ''} ${profile?.last_name || ''}`} 
                       />
                       <AvatarFallback>

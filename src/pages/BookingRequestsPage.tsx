@@ -54,23 +54,35 @@ export default function BookingRequestsPage() {
     const fetchBookingRequests = async () => {
       try {
         setLoading(true);
+        // Fix the query to use proper table joins
         const { data, error } = await supabase
           .from("booking_requests")
           .select(`
             *,
             guesthouses!inner(name, commune_id),
-            communes:guesthouses.commune_id(name, wilaya_id),
-            wilayas:communes.wilaya_id(name)
+            communes:guesthouses!inner(communes(name, wilaya_id)),
+            wilayas:communes!inner(wilayas(name))
           `)
           .eq("requester_id", user.id)
           .order("created_at", { ascending: false });
         
         if (error) throw error;
         
-        setBookingRequests(data || []);
+        // Transform the response to match our expected format
+        const formattedData = data?.map(item => {
+          return {
+            ...item,
+            communes: item.communes?.name ? { name: item.communes.name, wilaya_id: item.communes.wilaya_id } : null,
+            wilayas: item.wilayas?.name ? { name: item.wilayas.name } : null
+          };
+        }) || [];
+        
+        setBookingRequests(formattedData);
       } catch (err: any) {
         console.error("Error fetching booking requests:", err);
         toast.error("Erreur lors du chargement des demandes de réservation");
+        // Set empty array on error to avoid TypeScript issues
+        setBookingRequests([]);
       } finally {
         setLoading(false);
       }

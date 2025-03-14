@@ -28,6 +28,7 @@ interface BookingRequest {
   id: string;
   property_id: string;
   requester_id: string;
+  owner_id: string;
   start_date: string;
   end_date: string;
   status: "pending" | "accepted" | "rejected";
@@ -94,10 +95,13 @@ export default function BookingRequestManagement() {
     try {
       setActionLoading(true);
       
+      // Map action to database status value
+      const dbStatus = action === "accept" ? "accepted" : "rejected";
+      
       // Update booking request status
       const { error: updateError } = await supabase
         .from("booking_requests")
-        .update({ status: action })
+        .update({ status: dbStatus })
         .eq("id", selectedRequest.id);
       
       if (updateError) throw updateError;
@@ -126,7 +130,7 @@ export default function BookingRequestManagement() {
       setBookingRequests(prevRequests =>
         prevRequests.map(request =>
           request.id === selectedRequest.id
-            ? { ...request, status: action }
+            ? { ...request, status: dbStatus as "pending" | "accepted" | "rejected" }
             : request
         )
       );
