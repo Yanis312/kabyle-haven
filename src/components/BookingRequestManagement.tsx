@@ -37,16 +37,11 @@ interface BookingRequest {
   message?: string;
   created_at: string;
   updated_at: string;
-  properties: {
-    name: string;
-    availability: any;
-    images?: string[];
-  };
-  profiles: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  property_name?: string;
+  property_images?: string[];
+  requester_first_name?: string;
+  requester_last_name?: string;
+  requester_email?: string;
 }
 
 export default function BookingRequestManagement() {
@@ -103,20 +98,49 @@ export default function BookingRequestManagement() {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // First, fetch the booking requests
+      const { data: requestsData, error: requestsError } = await supabase
         .from("booking_requests")
-        .select(`
-          *,
-          properties:guesthouses(name, availability, images),
-          profiles:requester_id(first_name, last_name, email)
-        `)
+        .select("*")
         .eq("owner_id", user?.id)
         .order("created_at", { ascending: false });
       
-      if (error) throw error;
+      if (requestsError) throw requestsError;
       
-      console.log("Fetched booking requests:", data);
-      setBookingRequests(data || []);
+      if (!requestsData || requestsData.length === 0) {
+        setBookingRequests([]);
+        setLoading(false);
+        return;
+      }
+      
+      // For each request, fetch the associated property and requester details
+      const enhancedRequests = await Promise.all(requestsData.map(async (request) => {
+        // Get property details
+        const { data: propertyData } = await supabase
+          .from("guesthouses")
+          .select("name, images")
+          .eq("id", request.property_id)
+          .single();
+        
+        // Get requester profile details
+        const { data: requesterData } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", request.requester_id)
+          .single();
+        
+        return {
+          ...request,
+          property_name: propertyData?.name,
+          property_images: propertyData?.images,
+          requester_first_name: requesterData?.first_name,
+          requester_last_name: requesterData?.last_name,
+          requester_email: requesterData?.email
+        };
+      }));
+      
+      console.log("Enhanced booking requests:", enhancedRequests);
+      setBookingRequests(enhancedRequests);
       setNewRequestsCount(0); // Reset counter after fetching
     } catch (err: any) {
       console.error("Error fetching booking requests:", err);
@@ -146,9 +170,21 @@ export default function BookingRequestManagement() {
       
       // If accepting, we need to update the property availability
       if (action === "accept") {
+        // Get the current property availability
+        const { data: propertyData, error: propertyError } = await supabase
+          .from("guesthouses")
+          .select("availability")
+          .eq("id", selectedRequest.property_id)
+          .single();
+        
+        if (propertyError) {
+          console.error("Error fetching property:", propertyError);
+          toast.error("Erreur lors de la récupération du calendrier du logement");
+          return;
+        }
+        
         // Get the current availability or initialize a new one
-        const currentProperty = selectedRequest.properties;
-        const currentAvailability = currentProperty.availability || {};
+        const currentAvailability = propertyData?.availability || {};
         
         // Add the booked dates to the availability
         const startDate = new Date(selectedRequest.start_date);
@@ -186,10 +222,10 @@ export default function BookingRequestManagement() {
           console.error("Error updating availability:", availabilityError);
           toast.error("Réservation acceptée, mais erreur lors de la mise à jour du calendrier");
         } else {
-          toast.success(`Réservation acceptée pour ${selectedRequest.properties.name}`);
+          toast.success(`Réservation acceptée pour ${selectedRequest.property_name}`);
         }
       } else {
-        toast.info(`Demande de réservation refusée pour ${selectedRequest.properties.name}`);
+        toast.info(`Demande de réservation refusée pour ${selectedRequest.property_name}`);
       }
       
       // Close the dialog
@@ -280,9 +316,9 @@ export default function BookingRequestManagement() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle>{request.properties.name}</CardTitle>
+                  <CardTitle>{request.property_name || "Logement"}</CardTitle>
                   <CardDescription>
-                    {request.profiles.first_name} {request.profiles.last_name}
+                    {request.requester_first_name} {request.requester_last_name}
                   </CardDescription>
                 </div>
                 {request.status === "pending" ? (
@@ -307,11 +343,11 @@ export default function BookingRequestManagement() {
                   <span>Du {formatDate(request.start_date)} au {formatDate(request.end_date)}</span>
                 </div>
                 
-                {request.properties.images && request.properties.images.length > 0 && (
+                {request.property_images && request.property_images.length > 0 && (
                   <div className="mt-2">
                     <img 
-                      src={request.properties.images[0]} 
-                      alt={request.properties.name}
+                      src={request.property_images[0]} 
+                      alt={request.property_name || "Logement"}
                       className="w-full h-32 object-cover rounded-md"
                     />
                   </div>
@@ -367,7 +403,7 @@ export default function BookingRequestManagement() {
                     : "Réservation refusée"}
               </DialogTitle>
               <DialogDescription>
-                Réservation pour <strong>{selectedRequest.properties.name}</strong> du{" "}
+                Réservation pour <strong>{selectedRequest.property_name || "Logement"}</strong> du{" "}
                 {formatDate(selectedRequest.start_date)} au {formatDate(selectedRequest.end_date)}
               </DialogDescription>
             </DialogHeader>
@@ -379,9 +415,9 @@ export default function BookingRequestManagement() {
                   <div>
                     <h4 className="font-medium">Informations sur le client</h4>
                     <p className="text-sm text-gray-600">
-                      {selectedRequest.profiles.first_name} {selectedRequest.profiles.last_name}
+                      {selectedRequest.requester_first_name} {selectedRequest.requester_last_name}
                       <br />
-                      {selectedRequest.profiles.email}
+                      {selectedRequest.requester_email}
                     </p>
                   </div>
                 </div>
