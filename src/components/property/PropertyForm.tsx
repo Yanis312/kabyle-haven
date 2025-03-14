@@ -274,4 +274,4 @@ const PropertyForm = ({
 };
 
 export default PropertyForm;
-export type { PropertyFormProps, Property, Wilaya, Commune };
+export type { PropertyFormProps, Wilaya, Commune };

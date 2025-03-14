@@ -25,7 +25,7 @@ interface AvailabilityData {
 
 export default function AvailabilityManager({ property, onAvailabilityUpdated }: AvailabilityManagerProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange>({
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined
   });
@@ -51,12 +51,12 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
   }, [property]);
 
   const handleSaveAvailability = async () => {
-    if (!property?.id || !dateRange.from || !dateRange.to) {
+    if (!property?.id || !dateRange?.from || !dateRange?.to) {
       toast.error("Veuillez sélectionner une plage de dates complète");
       return;
     }
     
-    if (isAfter(startOfDay(dateRange.from), startOfDay(dateRange.to!))) {
+    if (isAfter(startOfDay(dateRange.from), startOfDay(dateRange.to))) {
       toast.error("La date de début doit être avant la date de fin");
       return;
     }
@@ -139,8 +139,8 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
           <Calendar
             mode="range"
             selected={dateRange}
-            onSelect={(range) => setDateRange(range || { from: undefined, to: undefined })}
-            defaultMonth={dateRange.from || new Date()}
+            onSelect={setDateRange}
+            defaultMonth={dateRange?.from || new Date()}
             numberOfMonths={2}
             locale={fr}
             className="border rounded-md p-3"
@@ -149,7 +149,7 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
 
         <div className="flex items-center justify-between pt-4">
           <div>
-            {dateRange.from && dateRange.to && (
+            {dateRange?.from && dateRange?.to && (
               <div className="text-sm">
                 <span className="font-medium">Période sélectionnée:</span>{" "}
                 <span className="text-green-600">
@@ -166,7 +166,7 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
           <Button
             variant="outline"
             onClick={handleClearAvailability}
-            disabled={isLoading || (!dateRange.from && !dateRange.to)}
+            disabled={isLoading || (!dateRange?.from && !dateRange?.to)}
             className="gap-2"
           >
             <X className="h-4 w-4" />
@@ -174,7 +174,7 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
           </Button>
           <Button
             onClick={handleSaveAvailability}
-            disabled={isLoading || !dateRange.from || !dateRange.to}
+            disabled={isLoading || !dateRange?.from || !dateRange?.to}
             className="gap-2"
           >
             <Check className="h-4 w-4" />
