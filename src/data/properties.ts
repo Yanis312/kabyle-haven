@@ -1,3 +1,4 @@
+
 export interface Wilaya {
   id: number;
   name: string;
@@ -16,8 +17,8 @@ export interface PropertyLocation {
 }
 
 export interface PropertyAvailability {
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
 }
 
 // Updated Property type with correct availability structure
@@ -37,10 +38,7 @@ export interface Property {
     longitude: number;
   };
   owner_id?: string;
-  availability?: {
-    startDate: string;
-    endDate: string;
-  };
+  availability?: PropertyAvailability;
   rating?: number;
   features?: string[];
 }
@@ -65,8 +63,8 @@ export const properties: Property[] = [
       longitude: 3.042,
     },
     availability: {
-      start_date: "2024-01-01",
-      end_date: "2024-12-31",
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
     },
     rating: 4.8,
     features: ["Piscine", "Salle de sport", "Parking gratuit"],
@@ -90,8 +88,8 @@ export const properties: Property[] = [
       longitude: -0.6314,
     },
     availability: {
-      start_date: "2024-02-15",
-      end_date: "2024-11-30",
+      startDate: "2024-02-15",
+      endDate: "2024-11-30",
     },
     rating: 4.5,
     features: ["Jardin", "Barbecue", "Climatisation"],
@@ -115,8 +113,8 @@ export const properties: Property[] = [
       longitude: 6.61472,
     },
     availability: {
-      start_date: "2024-03-01",
-      end_date: "2024-10-31",
+      startDate: "2024-03-01",
+      endDate: "2024-10-31",
     },
     rating: 4.2,
     features: ["Balcon", "Cuisine équipée", "WiFi gratuit"],
@@ -140,8 +138,8 @@ export const properties: Property[] = [
       longitude: 4.0575,
     },
     availability: {
-      start_date: "2024-04-15",
-      end_date: "2024-09-30",
+      startDate: "2024-04-15",
+      endDate: "2024-09-30",
     },
     rating: 4.9,
     features: ["Petit déjeuner inclus", "Terrasse", "Vue sur la montagne"],
@@ -165,8 +163,8 @@ export const properties: Property[] = [
       longitude: 3.7708,
     },
     availability: {
-      start_date: "2024-05-01",
-      end_date: "2024-08-31",
+      startDate: "2024-05-01",
+      endDate: "2024-08-31",
     },
     rating: 4.6,
     features: ["Patio", "Décoration traditionnelle", "Proche du marché"],

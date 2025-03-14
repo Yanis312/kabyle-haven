@@ -23,11 +23,24 @@ import {
   CirclePlus,
   Sun,
   Moon,
-  Search
+  Search,
+  Bell,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import HostDialog from "@/components/HostDialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 // Create a simple ModeToggle component to replace the import
 function ModeToggle() {
@@ -55,6 +68,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [hostDialogOpen, setHostDialogOpen] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState(0);
 
   const handleLogout = async () => {
     await signOut();
@@ -69,6 +83,50 @@ export default function Navbar() {
       toast.error("Veuillez entrer un terme de recherche");
     }
   };
+
+  // Fetch pending booking requests count for proprietaires
+  useEffect(() => {
+    if (user && profile?.role === 'proprietaire') {
+      const fetchPendingRequests = async () => {
+        try {
+          const { data, error, count } = await supabase
+            .from("booking_requests")
+            .select("id", { count: 'exact' })
+            .eq("owner_id", user.id)
+            .eq("status", "pending");
+          
+          if (error) throw error;
+          
+          setPendingRequests(count || 0);
+        } catch (err) {
+          console.error("Error fetching pending requests:", err);
+        }
+      };
+      
+      fetchPendingRequests();
+      
+      // Set up realtime subscription for new booking requests
+      const channel = supabase
+        .channel('booking-requests-count')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'booking_requests',
+            filter: `owner_id=eq.${user.id}`
+          },
+          () => {
+            fetchPendingRequests();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user, profile]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
@@ -98,6 +156,26 @@ export default function Navbar() {
         
         <div className="flex items-center space-x-2">
           <ModeToggle />
+          
+          {/* New notification bell for proprietaires */}
+          {user && profile?.role === 'proprietaire' && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => navigate('/booking-management')}
+            >
+              <Bell className="h-5 w-5" />
+              {pendingRequests > 0 && (
+                <Badge 
+                  className="absolute -top-1 -right-1 px-1.5 h-5 min-w-5 flex items-center justify-center bg-red-500 text-white text-xs"
+                  variant="destructive"
+                >
+                  {pendingRequests}
+                </Badge>
+              )}
+            </Button>
+          )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -148,6 +226,11 @@ export default function Navbar() {
                         <Link to="/booking-management">
                           <Calendar className="mr-2 h-4 w-4" />
                           Demandes de réservation
+                          {pendingRequests > 0 && (
+                            <Badge variant="outline" className="ml-2 bg-red-100 text-red-800 border-red-300">
+                              {pendingRequests}
+                            </Badge>
+                          )}
                         </Link>
                       </DropdownMenuItem>
                     </>
