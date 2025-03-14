@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import PropertyCard from "./property/PropertyCard";
+import PropertyCard from "./PropertyCard";
 import PropertyMap from "./PropertyMap";
 import LocationFilter from "./LocationFilter";
 import properties from "@/data/properties";
