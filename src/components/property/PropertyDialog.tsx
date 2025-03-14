@@ -28,7 +28,7 @@ const PropertyDialog = ({
         <DialogTitle>{editingProperty ? "Modifier le logement" : "Ajouter un logement"}</DialogTitle>
       </DialogHeader>
       <PropertyForm
-        editingProperty={editingProperty}
+        property={editingProperty || undefined}
         wilayas={wilayas}
         communes={communes}
         isSubmitting={isSubmitting}

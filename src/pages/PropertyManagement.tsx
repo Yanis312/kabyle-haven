@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -151,7 +152,18 @@ const PropertyManagement = () => {
         .order("name");
       
       if (wilayaError) throw wilayaError;
-      setWilayas(wilayaData || []);
+      
+      // Transform the data to match our Wilaya interface
+      const transformedWilayas: Wilaya[] = (wilayaData || []).map(wilaya => ({
+        id: wilaya.id,
+        name: wilaya.name,
+        code: wilaya.id.toString(), // Use id as code since it's required by our interface
+        name_ar: wilaya.name_ar,
+        name_en: wilaya.name_en,
+        created_at: wilaya.created_at
+      }));
+      
+      setWilayas(transformedWilayas);
       
       const { data: communeData, error: communeError } = await supabase
         .from("communes")
@@ -159,7 +171,18 @@ const PropertyManagement = () => {
         .order("name");
       
       if (communeError) throw communeError;
-      setCommunes(communeData || []);
+      
+      // Transform the data to match our Commune interface
+      const transformedCommunes: Commune[] = (communeData || []).map(commune => ({
+        id: commune.id.toString(), // Convert id to string as required by our interface
+        name: commune.name,
+        wilaya_id: commune.wilaya_id,
+        name_ar: commune.name_ar,
+        name_en: commune.name_en,
+        created_at: commune.created_at
+      }));
+      
+      setCommunes(transformedCommunes);
     } catch (err: any) {
       console.error("Error loading locations:", err);
       toast.error("Erreur lors du chargement des wilayas et communes");

@@ -24,13 +24,13 @@ const PropertyCard = ({
 }: PropertyCardProps) => {
   const [imageError, setImageError] = useState(false);
   
-  const getCommune = (id: number | null) => {
+  const getCommune = (id: number | null | undefined) => {
     if (!id) return "Non spécifié";
-    const commune = communes.find(c => c.id === id);
+    const commune = communes.find(c => Number(c.id) === id);
     return commune ? commune.name : "Non spécifié";
   };
   
-  const getWilaya = (id: number | null) => {
+  const getWilaya = (id: number | null | undefined) => {
     if (!id) return "Non spécifié";
     const wilaya = wilayas.find(w => w.id === id);
     return wilaya ? wilaya.name : "Non spécifié";

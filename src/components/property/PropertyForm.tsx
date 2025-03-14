@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,24 +11,31 @@ import { X, ImagePlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-interface Wilaya {
-  id: string;
+// Define the interfaces at the top of the file
+export interface Wilaya {
+  id: number;
   name: string;
   code: string;
+  name_ar?: string | null;
+  name_en?: string | null;
+  created_at?: string;
 }
 
-interface Commune {
-  id: string;
+export interface Commune {
+  id: string; 
   name: string;
-  wilaya_id: string;
+  wilaya_id: number;
+  name_ar?: string | null;
+  name_en?: string | null;
+  created_at?: string;
 }
 
 export interface Property {
   id?: string;
-  name?: string;
+  name: string;
   description?: string;
-  price?: number;
-  capacity?: number;
+  price: number;
+  capacity: number;
   wilaya_id?: number;
   commune_id?: number;
   owner_id?: string;
@@ -35,7 +43,7 @@ export interface Property {
   rating?: number;
   created_at?: string;
   updated_at?: string;
-  availability?: any; // Ajout de la propriété availability
+  availability?: any;
 }
 
 export interface PropertyFormProps {
@@ -59,20 +67,20 @@ const PropertyForm = ({
 }: PropertyFormProps) => {
   const [name, setName] = useState(property?.name || "");
   const [description, setDescription] = useState(property?.description || "");
-  const [price, setPrice] = useState(property?.price || "");
-  const [capacity, setCapacity] = useState(property?.capacity || "");
-  const [selectedWilaya, setSelectedWilaya] = useState<string>("");
-  const [selectedCommune, setSelectedCommune] = useState<string>("");
+  const [price, setPrice] = useState<string>(property?.price?.toString() || "");
+  const [capacity, setCapacity] = useState<string>(property?.capacity?.toString() || "");
+  const [selectedWilaya, setSelectedWilaya] = useState<string>(property?.wilaya_id?.toString() || "");
+  const [selectedCommune, setSelectedCommune] = useState<string>(property?.commune_id?.toString() || "");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
   
   useEffect(() => {
     if (property) {
-      setName(property.name);
+      setName(property.name || "");
       setDescription(property.description || "");
-      setPrice(property.price);
-      setCapacity(property.capacity);
+      setPrice(property.price?.toString() || "");
+      setCapacity(property.capacity?.toString() || "");
       
       if (property.images && Array.isArray(property.images)) {
         console.log("Setting existing images from property:", property.images);
@@ -277,4 +285,3 @@ const PropertyForm = ({
 };
 
 export default PropertyForm;
-export type { PropertyFormProps, Wilaya, Commune };
