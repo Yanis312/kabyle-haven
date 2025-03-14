@@ -45,11 +45,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isSigningOut
   });
 
-  // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Get initial session
         const { data: sessionData } = await supabase.auth.getSession();
         console.log("Initial session check:", sessionData.session ? "Active session found" : "No session found");
         
@@ -64,7 +62,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(false);
         }
 
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             console.log("Auth state changed:", event, newSession ? "Session exists" : "No session");
@@ -77,7 +74,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               setLoading(false);
               setIsSigningOut(false);
               
-              // Force redirect to auth page on sign out
               navigate("/auth", { replace: true });
               return;
             }
@@ -105,7 +101,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initAuth();
 
-    // Cleanup
     return () => {
       console.log("Cleaning up auth subscription");
       if (authSubscriptionRef.current) {
@@ -114,7 +109,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [navigate]);
 
-  // Check session status when window gets focus or visibility changes
   useEffect(() => {
     const checkSession = async () => {
       console.log("Window focused or visibility changed - checking session...");
@@ -142,7 +136,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           } else {
             console.log("No user after tab switch, clearing profile");
             setProfile(null);
-            // Only navigate to auth page if there's no session
             if (!data.session) {
               navigate("/auth", { replace: true });
             }
@@ -155,7 +148,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    // Check on focus and visibility change
     window.addEventListener('focus', checkSession);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
@@ -163,7 +155,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
     
-    // Also check immediately on mount
     checkSession();
     
     return () => {
@@ -172,9 +163,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [session, navigate, isSigningOut]);
 
-  // Add a more frequent session check to ensure persistence
   useEffect(() => {
-    // Check session every 30 seconds to ensure it's still valid
     const intervalId = setInterval(async () => {
       if (!isSigningOut && !loading) {
         console.log("Periodic session check...");
@@ -183,7 +172,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (data.session) {
             console.log("Session still valid");
             
-            // Update session state if there's any change
             if (JSON.stringify(session) !== JSON.stringify(data.session)) {
               console.log("Session updated from periodic check");
               setSession(data.session);
@@ -200,7 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error in periodic session check:", error);
         }
       }
-    }, 30000); // 30 seconds
+    }, 30000);
     
     return () => clearInterval(intervalId);
   }, [session, isSigningOut, loading, navigate]);
@@ -282,7 +270,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) throw error;
       
-      // Refresh profile data
       await fetchProfile(user.id);
       
       toast.success("Profil mis à jour avec succès");
@@ -305,7 +292,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       console.log("Signing up with email:", email);
       
-      // Register the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -325,7 +311,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data?.user) {
         console.log("User registered successfully:", data.user.id);
         
-        // Create the profile with the same ID
         const profileCreated = await createProfile(
           data.user.id,
           email,
@@ -365,7 +350,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       console.log("Sign in successful:", data);
 
-      // Redirect based on role
       if (data.user) {
         const { data: profileData } = await supabase
           .from("profiles")
@@ -405,16 +389,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsSigningOut(true);
       console.log("Starting sign out process");
       
-      // Clear local state immediately for a more responsive UI
-      console.log("Clearing local state");
       setSession(null);
       setUser(null);
       setProfile(null);
       
-      // Sign out from Supabase (all sessions)
-      console.log("Calling Supabase signOut with scope:global");
       const { error } = await supabase.auth.signOut({
-        scope: 'global' // Sign out from all devices
+        scope: 'global'
       });
       
       if (error) {
@@ -425,12 +405,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Sign out successful");
       toast.success("Déconnexion réussie!");
       
-      // Navigate to auth page
-      console.log("Navigating to auth page");
       navigate("/auth", { replace: true });
       
-      // Force a page reload as last resort
-      console.log("Forcing page reload");
       setTimeout(() => {
         window.location.href = '/auth';
       }, 100);
@@ -438,7 +414,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Sign out error:", error);
       toast.error(`Erreur de déconnexion: ${error.message}`);
       
-      // Reset signing out state to allow retrying
       setIsSigningOut(false);
     }
   };

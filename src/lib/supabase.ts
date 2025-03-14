@@ -1,18 +1,11 @@
-
 import { createClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
-export const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
-export const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+// Supabase project configuration
+export const supabaseUrl = "https://wiyqlsbatmrwunvoihxa.supabase.co";
+export const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpeXFsc2JhdG1yd3Vudm9paHhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3MjIzOTYsImV4cCI6MjA1NzI5ODM5Nn0.PjzdfOkQpog6Ra4GMpVSZop-6DofagQsK8h8W2mnhLg";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Missing Supabase URL or Anonymous Key");
-}
-
-export const supabase = createClient(
-  supabaseUrl || "",
-  supabaseAnonKey || ""
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Checks if a storage bucket exists, and creates it if it doesn't
