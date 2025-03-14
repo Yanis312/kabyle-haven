@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,8 @@ interface Property {
   images: string[] | null;
   wilaya_id: number | null;
   commune_id: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 interface PropertyFormProps {

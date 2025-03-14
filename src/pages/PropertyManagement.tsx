@@ -81,11 +81,13 @@ const PropertyManagement = () => {
       if (field === 'name') {
         return direction * a.name.localeCompare(b.name);
       } else if (field === 'created_at') {
-        return direction * ((new Date(a.created_at || 0)).getTime() - (new Date(b.created_at || 0)).getTime());
+        const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return direction * (aDate - bDate);
       } else {
-        const aValue = a[field] || 0;
-        const bValue = b[field] || 0;
-        return direction * (aValue - bValue);
+        const aValue = a[field as keyof Property] || 0;
+        const bValue = b[field as keyof Property] || 0;
+        return direction * (Number(aValue) - Number(bValue));
       }
     });
     

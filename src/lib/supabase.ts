@@ -40,17 +40,9 @@ export const createStoragePolicies = async (bucketName: string): Promise<void> =
       
       console.log("Bucket created successfully:", data);
       
-      // Create public access policy for the bucket
-      const { error: policyError } = await supabase.rpc('create_public_bucket_policy', {
-        bucket_name: bucketName
-      });
-      
-      if (policyError) {
-        console.error("Error creating policy:", policyError);
-        // Continue anyway, the bucket may still work
-      } else {
-        console.log(`Public policy created for bucket ${bucketName}`);
-      }
+      // Instead of using RPC, use direct SQL or just update the bucket to be public
+      // which we've already done above with the public: true option
+      console.log(`Public bucket ${bucketName} created successfully`);
     } else {
       console.log(`Bucket ${bucketName} already exists`);
       
