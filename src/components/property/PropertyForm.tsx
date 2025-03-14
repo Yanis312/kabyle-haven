@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ interface Commune {
   wilaya_id: number;
 }
 
-interface Property {
+export interface Property {
   id: string;
   name: string;
   description?: string;
