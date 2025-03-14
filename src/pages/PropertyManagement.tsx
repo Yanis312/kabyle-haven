@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -15,6 +14,7 @@ import LoadingState from "@/components/property/LoadingState";
 import ErrorState from "@/components/property/ErrorState";
 import EmptyPropertyList from "@/components/property/EmptyPropertyList";
 import { Property, Wilaya, Commune } from "@/components/property/PropertyForm";
+import PropertyFilters, { FilterOptions, SortOption } from "@/components/property/PropertyFilters";
 
 const STORAGE_BUCKET = "guesthouse-images";
 
@@ -33,11 +33,64 @@ const PropertyManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bucketInitialized, setBucketInitialized] = useState(false);
   
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
+  const [sortOption, setSortOption] = useState<SortOption>({ 
+    field: 'created_at', 
+    direction: 'desc' 
+  });
+  
   useEffect(() => {
     fetchProperties();
     fetchWilayasAndCommunes();
     checkStorageBucket();
   }, [user]);
+  
+  const filteredProperties = useMemo(() => {
+    if (!properties.length) return [];
+    
+    let result = [...properties];
+    
+    if (filterOptions.minPrice !== undefined) {
+      result = result.filter(p => p.price >= filterOptions.minPrice!);
+    }
+    
+    if (filterOptions.maxPrice !== undefined) {
+      result = result.filter(p => p.price <= filterOptions.maxPrice!);
+    }
+    
+    if (filterOptions.minCapacity !== undefined) {
+      result = result.filter(p => p.capacity >= filterOptions.minCapacity!);
+    }
+    
+    if (filterOptions.maxCapacity !== undefined) {
+      result = result.filter(p => p.capacity <= filterOptions.maxCapacity!);
+    }
+    
+    if (filterOptions.wilayaId !== undefined) {
+      result = result.filter(p => p.wilaya_id === filterOptions.wilayaId);
+    }
+    
+    if (filterOptions.communeId !== undefined) {
+      result = result.filter(p => p.commune_id === filterOptions.communeId);
+    }
+    
+    result.sort((a, b) => {
+      const field = sortOption.field;
+      const direction = sortOption.direction === 'asc' ? 1 : -1;
+      
+      if (field === 'name') {
+        return direction * a.name.localeCompare(b.name);
+      } else if (field === 'created_at') {
+        return direction * ((new Date(a.created_at || 0)).getTime() - (new Date(b.created_at || 0)).getTime());
+      } else {
+        const aValue = a[field] || 0;
+        const bValue = b[field] || 0;
+        return direction * (aValue - bValue);
+      }
+    });
+    
+    return result;
+  }, [properties, filterOptions, sortOption]);
   
   const checkStorageBucket = async () => {
     if (bucketInitialized) return;
@@ -165,7 +218,6 @@ const PropertyManagement = () => {
       
       console.log("Existing images from hidden input:", existingImages);
       
-      // Get files for upload from the file input
       const uploadedFiles: File[] = [];
       const fileInputs = form.querySelectorAll<HTMLInputElement>('input[type="file"]');
       
@@ -184,7 +236,6 @@ const PropertyManagement = () => {
       if (uploadedFiles.length > 0) {
         console.log("Uploading files to bucket:", STORAGE_BUCKET);
         
-        // Ensure bucket exists
         try {
           await checkStorageBucket();
         } catch (error) {
@@ -192,7 +243,6 @@ const PropertyManagement = () => {
           // Continue anyway to attempt upload
         }
         
-        // Double-check authentication
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
           throw new Error("Session expired, please log in again");
@@ -200,7 +250,6 @@ const PropertyManagement = () => {
         
         console.log("Session for upload:", sessionData.session.user.id);
         
-        // Upload the files
         try {
           const uploadedImageUrls = await uploadFiles(uploadedFiles, STORAGE_BUCKET);
           console.log("Upload complete. Uploaded image URLs:", uploadedImageUrls);
@@ -217,7 +266,6 @@ const PropertyManagement = () => {
       
       setIsUploading(false);
       
-      // Build property data for database
       const propertyData = {
         name,
         description,
@@ -234,7 +282,6 @@ const PropertyManagement = () => {
       
       let result;
       
-      // Save to database (update or insert)
       if (editingProperty) {
         console.log("Updating existing property:", editingProperty.id);
         result = await supabase
@@ -249,17 +296,14 @@ const PropertyManagement = () => {
           .insert(propertyData);
       }
       
-      // Check for errors
       if (result.error) {
         console.error("Database error:", result.error);
         throw result.error;
       }
       
-      // Log success
       console.log("Database operation successful:", result);
       toast.success(editingProperty ? "Logement mis à jour avec succès" : "Logement créé avec succès");
       
-      // Refresh the properties list
       fetchProperties();
       setEditingProperty(null);
       setDialogOpen(false);
@@ -355,6 +399,16 @@ const PropertyManagement = () => {
     setDialogOpen(true);
   };
   
+  const handleFilterChange = (filters: FilterOptions) => {
+    console.log("Filters changed:", filters);
+    setFilterOptions(filters);
+  };
+  
+  const handleSortChange = (sort: SortOption) => {
+    console.log("Sort changed:", sort);
+    setSortOption(sort);
+  };
+  
   return (
     <>
       <Navbar />
@@ -380,6 +434,15 @@ const PropertyManagement = () => {
           </Dialog>
         </div>
         
+        {!loading && !error && properties.length > 0 && (
+          <PropertyFilters 
+            wilayas={wilayas}
+            communes={communes}
+            onFilterChange={handleFilterChange}
+            onSortChange={handleSortChange}
+          />
+        )}
+        
         {loading ? (
           <LoadingState />
         ) : error ? (
@@ -395,7 +458,7 @@ const PropertyManagement = () => {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
+            {filteredProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}
