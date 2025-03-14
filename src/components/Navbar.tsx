@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,7 +40,6 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 
 // Create a simple ModeToggle component to replace the import
 function ModeToggle() {
@@ -69,6 +68,7 @@ export default function Navbar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [hostDialogOpen, setHostDialogOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [pendingBookings, setPendingBookings] = useState(0);
 
   const handleLogout = async () => {
     await signOut();
@@ -128,6 +128,51 @@ export default function Navbar() {
     }
   }, [user, profile]);
 
+  // Fetch pending booking requests count for clients
+  useEffect(() => {
+    if (user && profile?.role === 'client') {
+      const fetchMyBookings = async () => {
+        try {
+          // Check if there are any updates to the user's booking requests
+          const { data, error, count } = await supabase
+            .from("booking_requests")
+            .select("id", { count: 'exact' })
+            .eq("requester_id", user.id)
+            .not("status", "eq", "pending");
+          
+          if (error) throw error;
+          
+          setPendingBookings(count || 0);
+        } catch (err) {
+          console.error("Error fetching client bookings:", err);
+        }
+      };
+      
+      fetchMyBookings();
+      
+      // Set up realtime subscription for booking request status changes
+      const channel = supabase
+        .channel('client-bookings-count')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'booking_requests',
+            filter: `requester_id=eq.${user.id}`
+          },
+          () => {
+            fetchMyBookings();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user, profile]);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
@@ -157,7 +202,7 @@ export default function Navbar() {
         <div className="flex items-center space-x-2">
           <ModeToggle />
           
-          {/* New notification bell for proprietaires */}
+          {/* Notification bell for proprietaires */}
           {user && profile?.role === 'proprietaire' && (
             <Button 
               variant="ghost" 
@@ -172,6 +217,25 @@ export default function Navbar() {
                   variant="destructive"
                 >
                   {pendingRequests}
+                </Badge>
+              )}
+            </Button>
+          )}
+          
+          {/* Notification bell for clients */}
+          {user && profile?.role === 'client' && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => navigate('/my-bookings')}
+            >
+              <Calendar className="h-5 w-5" />
+              {pendingBookings > 0 && (
+                <Badge 
+                  className="absolute -top-1 -right-1 px-1.5 h-5 min-w-5 flex items-center justify-center bg-amber-500 text-white text-xs"
+                >
+                  {pendingBookings}
                 </Badge>
               )}
             </Button>
@@ -239,6 +303,11 @@ export default function Navbar() {
                       <Link to="/my-bookings">
                         <Calendar className="mr-2 h-4 w-4" />
                         Mes réservations
+                        {pendingBookings > 0 && (
+                          <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
+                            {pendingBookings}
+                          </Badge>
+                        )}
                       </Link>
                     </DropdownMenuItem>
                   )}
