@@ -26,13 +26,15 @@ const PropertyCard = ({
   
   const getCommune = (id: number | null | undefined) => {
     if (!id) return "Non spécifié";
+    // Convertir l'id en nombre pour la comparaison
     const commune = communes.find(c => Number(c.id) === id);
     return commune ? commune.name : "Non spécifié";
   };
   
   const getWilaya = (id: number | null | undefined) => {
     if (!id) return "Non spécifié";
-    const wilaya = wilayas.find(w => w.id === id);
+    // Convertir l'id en nombre pour la comparaison
+    const wilaya = wilayas.find(w => Number(w.id) === id);
     return wilaya ? wilaya.name : "Non spécifié";
   };
 

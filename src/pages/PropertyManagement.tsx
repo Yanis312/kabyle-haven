@@ -157,7 +157,7 @@ const PropertyManagement = () => {
       const transformedWilayas: Wilaya[] = (wilayaData || []).map(wilaya => ({
         id: wilaya.id,
         name: wilaya.name,
-        code: wilaya.id.toString(), // Use id as code since it's required by our interface
+        code: wilaya.id.toString(), // Utiliser id comme code puisqu'il est requis par notre interface
         name_ar: wilaya.name_ar,
         name_en: wilaya.name_en,
         created_at: wilaya.created_at
@@ -174,7 +174,7 @@ const PropertyManagement = () => {
       
       // Transform the data to match our Commune interface
       const transformedCommunes: Commune[] = (communeData || []).map(commune => ({
-        id: commune.id.toString(), // Convert id to string as required by our interface
+        id: commune.id.toString(), // Convertir id en string comme requis par notre interface
         name: commune.name,
         wilaya_id: commune.wilaya_id,
         name_ar: commune.name_ar,
