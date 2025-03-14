@@ -73,8 +73,8 @@ const PropertyMap = ({
     properties.forEach(property => {
       // Generate random coordinates near Kabylie for demo
       // In a real app, these would come from the database
-      const lat = 36.7 + (Math.random() - 0.5) * 0.5;
-      const lng = 4.2 + (Math.random() - 0.5) * 0.5;
+      const lat = property.location?.latitude || (36.7 + (Math.random() - 0.5) * 0.5);
+      const lng = property.location?.longitude || (4.2 + (Math.random() - 0.5) * 0.5);
 
       // Create marker element
       const el = document.createElement("div");
@@ -91,7 +91,7 @@ const PropertyMap = ({
         .setPopup(
           new mapboxgl.Popup({ offset: 25 }).setHTML(
             `<div class="p-2">
-              <h3 class="font-bold text-sm">${property.title}</h3>
+              <h3 class="font-bold text-sm">${property.title || property.name}</h3>
               <p class="text-xs">${property.price} DA / nuit</p>
             </div>`
           )

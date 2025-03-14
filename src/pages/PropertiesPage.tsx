@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ArrowLeft, Filter } from "lucide-react";
@@ -36,10 +35,16 @@ interface Commune {
 const mapToPropertyCardProps = (property: Property, communeName: string): FullProperty => {
   return {
     id: property.id,
+    name: property.name,
     title: property.name,
     description: property.description || "",
     price: property.price,
+    capacity: property.capacity,
+    wilaya_id: 0, // Placeholder
+    commune_id: property.commune_id || 0,
     location: {
+      latitude: 0, // Will be randomized in the map
+      longitude: 0, // Will be randomized in the map
       village: communeName || "",
       wilaya: ""
     },

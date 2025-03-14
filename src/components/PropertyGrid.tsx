@@ -82,10 +82,16 @@ const PropertyGrid = () => {
         // Map data to property format
         const formattedProperties: Property[] = data.map(item => ({
           id: item.id,
-          title: item.name,
+          name: item.name,
+          title: item.name, // For backward compatibility
           description: item.description || "",
           price: item.price,
+          capacity: item.capacity,
+          wilaya_id: item.wilaya_id || 0,
+          commune_id: item.commune_id || 0,
           location: {
+            latitude: 0, // Placeholder
+            longitude: 0, // Placeholder
             village: item.commune.name,
             wilaya: item.commune.wilaya.name
           },

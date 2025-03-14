@@ -29,6 +29,9 @@ const PropertyCard = ({ property, onHover }: PropertyCardProps) => {
     );
   };
   
+  // Use title or name (title is for backward compatibility)
+  const displayTitle = property.title || property.name;
+  
   return (
     <div 
       className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
@@ -38,7 +41,7 @@ const PropertyCard = ({ property, onHover }: PropertyCardProps) => {
         {property.images && property.images.length > 0 ? (
           <img 
             src={property.images[currentImageIndex]} 
-            alt={property.title} 
+            alt={displayTitle} 
             className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
           />
         ) : (
@@ -71,14 +74,16 @@ const PropertyCard = ({ property, onHover }: PropertyCardProps) => {
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent text-white p-2">
           <div className="flex items-center">
             <MapPin className="h-4 w-4 mr-1" />
-            <span className="text-sm">{property.location.village}, {property.location.wilaya}</span>
+            <span className="text-sm">
+              {property.location?.village || "Non spécifié"}, {property.location?.wilaya || "Non spécifié"}
+            </span>
           </div>
         </div>
       </div>
       
       <div className="p-4">
         <div>
-          <h3 className="font-bold text-lg mb-2 truncate">{property.title}</h3>
+          <h3 className="font-bold text-lg mb-2 truncate">{displayTitle}</h3>
         </div>
         
         <div className="flex justify-between items-center mb-3">
