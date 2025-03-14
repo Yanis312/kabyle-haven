@@ -30,8 +30,8 @@ const PropertyAvailability = ({
   onAvailabilityChange 
 }: PropertyAvailabilityProps) => {
   const [date, setDate] = useState<Date | undefined>(
-    property.availability?.startDate ? 
-    new Date(property.availability.startDate) : 
+    property.availability?.start_date ? 
+    new Date(property.availability.start_date) : 
     undefined
   );
 
@@ -39,13 +39,13 @@ const PropertyAvailability = ({
     from: Date | undefined;
     to: Date | undefined;
   }>({
-    from: property.availability?.startDate ? new Date(property.availability.startDate) : undefined,
-    to: property.availability?.endDate ? new Date(property.availability.endDate) : undefined,
+    from: property.availability?.start_date ? new Date(property.availability.start_date) : undefined,
+    to: property.availability?.end_date ? new Date(property.availability.end_date) : undefined,
   });
 
   const hasAvailability = property.availability && 
-    property.availability.startDate && 
-    property.availability.endDate;
+    property.availability.start_date && 
+    property.availability.end_date;
 
   const handleSelect = (selectedDateRange: {
     from: Date | undefined;
@@ -123,7 +123,7 @@ const PropertyAvailability = ({
           <div className="flex items-center text-green-700 mb-4">
             <CheckCircle2 className="h-5 w-5 mr-2 text-green-600" />
             <p className="font-medium">
-              Ce logement est disponible du {format(new Date(property.availability.startDate), "d MMMM yyyy", { locale: fr })} au {format(new Date(property.availability.endDate), "d MMMM yyyy", { locale: fr })}
+              Ce logement est disponible du {format(new Date(property.availability.start_date), "d MMMM yyyy", { locale: fr })} au {format(new Date(property.availability.end_date), "d MMMM yyyy", { locale: fr })}
             </p>
           </div>
           
@@ -132,16 +132,16 @@ const PropertyAvailability = ({
           <div className="flex justify-center">
             <Calendar
               mode="range"
-              defaultMonth={new Date(property.availability.startDate)}
+              defaultMonth={new Date(property.availability.start_date)}
               selected={{
-                from: new Date(property.availability.startDate),
-                to: new Date(property.availability.endDate)
+                from: new Date(property.availability.start_date),
+                to: new Date(property.availability.end_date)
               }}
               className="pointer-events-none"
               disabled={[
                 {
-                  before: new Date(property.availability.startDate),
-                  after: new Date(property.availability.endDate)
+                  before: new Date(property.availability.start_date),
+                  after: new Date(property.availability.end_date)
                 }
               ]}
               locale={fr}
