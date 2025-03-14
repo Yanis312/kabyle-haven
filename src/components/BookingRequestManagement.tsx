@@ -40,6 +40,7 @@ interface BookingRequest {
   properties: {
     name: string;
     availability: any;
+    images?: string[];
   };
   profiles: {
     first_name: string;
@@ -72,7 +73,7 @@ export default function BookingRequestManagement() {
         .from("booking_requests")
         .select(`
           *,
-          properties:guesthouses(name, availability),
+          properties:guesthouses(name, availability, images),
           profiles:requester_id(first_name, last_name, email)
         `)
         .eq("owner_id", user?.id)
@@ -80,6 +81,7 @@ export default function BookingRequestManagement() {
       
       if (error) throw error;
       
+      console.log("Fetched booking requests:", data);
       setBookingRequests(data || []);
     } catch (err: any) {
       console.error("Error fetching booking requests:", err);
@@ -109,11 +111,48 @@ export default function BookingRequestManagement() {
       
       // If accepting, we need to update the property availability
       if (action === "accept") {
-        // Logic to block dates in the availability calendar would go here
-        console.log("Updating property availability...");
+        // Get the current availability or initialize a new one
+        const currentProperty = selectedRequest.properties;
+        const currentAvailability = currentProperty.availability || {};
         
-        // For now, we'll just log it
-        toast.success(`Réservation acceptée pour ${selectedRequest.properties.name}`);
+        // Add the booked dates to the availability
+        const startDate = new Date(selectedRequest.start_date);
+        const endDate = new Date(selectedRequest.end_date);
+        
+        // Create an array of dates between start and end
+        const bookedDates = [];
+        const currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          const dateString = currentDate.toISOString().split('T')[0];
+          bookedDates.push(dateString);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // Update the availability object
+        const updatedAvailability = { ...currentAvailability };
+        
+        // Mark these dates as booked
+        for (const date of bookedDates) {
+          if (!updatedAvailability[date]) {
+            updatedAvailability[date] = { status: 'booked' };
+          } else {
+            updatedAvailability[date].status = 'booked';
+          }
+        }
+        
+        // Update the property availability
+        const { error: availabilityError } = await supabase
+          .from("guesthouses")
+          .update({ availability: updatedAvailability })
+          .eq("id", selectedRequest.property_id);
+        
+        if (availabilityError) {
+          console.error("Error updating availability:", availabilityError);
+          toast.error("Réservation acceptée, mais erreur lors de la mise à jour du calendrier");
+        } else {
+          toast.success(`Réservation acceptée pour ${selectedRequest.properties.name}`);
+        }
       } else {
         toast.info(`Demande de réservation refusée pour ${selectedRequest.properties.name}`);
       }
@@ -214,20 +253,30 @@ export default function BookingRequestManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex items-center text-sm">
                   <Calendar className="mr-2 h-4 w-4 text-gray-500" />
                   <span>Du {formatDate(request.start_date)} au {formatDate(request.end_date)}</span>
                 </div>
                 
+                {request.properties.images && request.properties.images.length > 0 && (
+                  <div className="mt-2">
+                    <img 
+                      src={request.properties.images[0]} 
+                      alt={request.properties.name}
+                      className="w-full h-32 object-cover rounded-md"
+                    />
+                  </div>
+                )}
+                
                 {request.message && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm">
+                  <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
                     <p className="font-medium mb-1">Message:</p>
                     <p>{request.message}</p>
                   </div>
                 )}
                 
-                <div className="text-xs text-gray-500 mt-4">
+                <div className="text-xs text-gray-500 mt-2">
                   Demande reçue le {format(new Date(request.created_at), "PPP", { locale: fr })}
                 </div>
               </div>
