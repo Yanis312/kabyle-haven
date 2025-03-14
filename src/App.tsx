@@ -9,7 +9,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import PropertyDetail from "./pages/PropertyDetail";
 import Regions from "./pages/Regions";
-import Host from "./pages/Host";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -17,7 +16,6 @@ import WilayasPage from "./pages/WilayasPage";
 import CommunePage from "./pages/CommunePage";
 import PropertiesPage from "./pages/PropertiesPage";
 import PropertyManagement from "./pages/PropertyManagement";
-import PropertyAvailabilityManagement from "./pages/PropertyAvailabilityManagement";
 import BookingRequestsPage from "./pages/BookingRequestsPage";
 import BookingManagementPage from "./pages/BookingManagementPage";
 
@@ -60,19 +58,9 @@ const App = () => (
             } />
             
             {/* Protected routes for proprietaire only */}
-            <Route path="/host" element={
-              <ProtectedRoute allowedRoles={["proprietaire"]}>
-                <Host />
-              </ProtectedRoute>
-            } />
             <Route path="/property-management" element={
               <ProtectedRoute allowedRoles={["proprietaire"]}>
                 <PropertyManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="/property-availability" element={
-              <ProtectedRoute allowedRoles={["proprietaire"]}>
-                <PropertyAvailabilityManagement />
               </ProtectedRoute>
             } />
             <Route path="/booking-management" element={

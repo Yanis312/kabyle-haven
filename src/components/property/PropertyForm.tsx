@@ -7,9 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileInput } from "@/components/ui/file-input";
-import { X, ImagePlus, Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { X, ImagePlus, Loader2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import AvailabilityManager from "./AvailabilityManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define the interfaces at the top of the file
 export interface Wilaya {
@@ -74,6 +77,7 @@ const PropertyForm = ({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
+  const [activeTab, setActiveTab] = useState("details");
   
   useEffect(() => {
     if (property) {
@@ -133,138 +137,160 @@ const PropertyForm = ({
     await onRemoveImage(url);
   };
 
-  console.log("Form state:", { 
-    name, 
-    description, 
-    price, 
-    capacity, 
-    selectedWilaya, 
-    selectedCommune,
-    uploadedFiles: uploadedFiles.length,
-    existingImages
-  });
+  const handleAvailabilityUpdated = () => {
+    // This will be called when availability is updated
+    toast.success("Disponibilité mise à jour");
+  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="property-name">Nom du logement *</Label>
-          <Input
-            id="property-name"
-            name="property-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Maison traditionnelle, Villa moderne, etc."
-            required
-          />
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="details">Détails du logement</TabsTrigger>
+          <TabsTrigger value="availability">Disponibilité</TabsTrigger>
+        </TabsList>
         
-        <div className="space-y-2">
-          <Label htmlFor="property-description">Description</Label>
-          <Textarea
-            id="property-description"
-            name="property-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Décrivez votre logement..."
-            rows={4}
-          />
-        </div>
+        <TabsContent value="details" className="space-y-4 pt-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="property-name">Nom du logement *</Label>
+              <Input
+                id="property-name"
+                name="property-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Maison traditionnelle, Villa moderne, etc."
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="property-description">Description</Label>
+              <Textarea
+                id="property-description"
+                name="property-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Décrivez votre logement..."
+                rows={4}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="property-price">Prix par nuit (DA) *</Label>
+                <Input
+                  id="property-price"
+                  name="property-price"
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="5000"
+                  min="0"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="property-capacity">Capacité (personnes) *</Label>
+                <Input
+                  id="property-capacity"
+                  name="property-capacity"
+                  type="number"
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  placeholder="4"
+                  min="1"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="property-wilaya">Wilaya *</Label>
+                <Select
+                  name="property-wilaya"
+                  value={selectedWilaya}
+                  onValueChange={setSelectedWilaya}
+                  required
+                >
+                  <SelectTrigger id="property-wilaya">
+                    <SelectValue placeholder="Sélectionner une wilaya" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wilayas.map((wilaya) => (
+                      <SelectItem key={wilaya.id} value={wilaya.id.toString()}>
+                        {wilaya.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="property-commune">Commune *</Label>
+                <Select
+                  name="property-commune"
+                  value={selectedCommune}
+                  onValueChange={setSelectedCommune}
+                  disabled={!selectedWilaya || filteredCommunes.length === 0}
+                  required
+                >
+                  <SelectTrigger id="property-commune">
+                    <SelectValue placeholder={
+                      !selectedWilaya 
+                        ? "Sélectionnez d'abord une wilaya" 
+                        : filteredCommunes.length === 0 
+                          ? "Aucune commune disponible" 
+                          : "Sélectionner une commune"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredCommunes.map((commune) => (
+                      <SelectItem key={commune.id} value={commune.id.toString()}>
+                        {commune.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Images</Label>
+              <FileInput 
+                onFilesChange={setUploadedFiles}
+                selectedFiles={uploadedFiles}
+                urls={existingImages}
+                onRemoveUrl={handleRemoveImage}
+                maxFiles={5}
+              />
+            </div>
+          </div>
+        </TabsContent>
         
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="property-price">Prix par nuit (DA) *</Label>
-            <Input
-              id="property-price"
-              name="property-price"
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="5000"
-              min="0"
-              required
+        <TabsContent value="availability" className="pt-4">
+          {property && property.id ? (
+            <AvailabilityManager 
+              property={property} 
+              onAvailabilityUpdated={handleAvailabilityUpdated}
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="property-capacity">Capacité (personnes) *</Label>
-            <Input
-              id="property-capacity"
-              name="property-capacity"
-              type="number"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
-              placeholder="4"
-              min="1"
-              required
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="property-wilaya">Wilaya *</Label>
-            <Select
-              name="property-wilaya"
-              value={selectedWilaya}
-              onValueChange={setSelectedWilaya}
-              required
-            >
-              <SelectTrigger id="property-wilaya">
-                <SelectValue placeholder="Sélectionner une wilaya" />
-              </SelectTrigger>
-              <SelectContent>
-                {wilayas.map((wilaya) => (
-                  <SelectItem key={wilaya.id} value={wilaya.id.toString()}>
-                    {wilaya.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="property-commune">Commune *</Label>
-            <Select
-              name="property-commune"
-              value={selectedCommune}
-              onValueChange={setSelectedCommune}
-              disabled={!selectedWilaya || filteredCommunes.length === 0}
-              required
-            >
-              <SelectTrigger id="property-commune">
-                <SelectValue placeholder={
-                  !selectedWilaya 
-                    ? "Sélectionnez d'abord une wilaya" 
-                    : filteredCommunes.length === 0 
-                      ? "Aucune commune disponible" 
-                      : "Sélectionner une commune"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCommunes.map((commune) => (
-                  <SelectItem key={commune.id} value={commune.id.toString()}>
-                    {commune.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label>Images</Label>
-          <FileInput 
-            onFilesChange={setUploadedFiles}
-            selectedFiles={uploadedFiles}
-            urls={existingImages}
-            onRemoveUrl={handleRemoveImage}
-            maxFiles={5}
-          />
-        </div>
-      </div>
+          ) : (
+            <div className="text-center p-6 bg-gray-50 border border-dashed border-gray-200 rounded-lg">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune disponibilité</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Vous pourrez définir la disponibilité après avoir créé le logement.
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
       
-      <div className="flex justify-end gap-2 pt-4">
+      <Separator className="my-6" />
+      
+      <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" className="dialog-close">Annuler</Button>
         <Button 
           type="submit" 

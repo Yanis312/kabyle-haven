@@ -116,14 +116,8 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Gérer la disponibilité</CardTitle>
-        <CardDescription>
-          Définissez les périodes où votre logement est disponible à la location
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div>
+      <div className="space-y-4">
         <div className="flex flex-col items-center space-y-4">
           <div className="flex items-center justify-center gap-2 text-sm">
             <div className="flex items-center">
@@ -181,7 +175,7 @@ export default function AvailabilityManager({ property, onAvailabilityUpdated }:
             Enregistrer
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
