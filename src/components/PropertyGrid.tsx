@@ -7,7 +7,6 @@ import LocationFilter from "./LocationFilter";
 import properties from "@/data/properties";
 import { Button } from "./ui/button";
 import { Filter, X, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const PropertyGrid = () => {
   const [searchParams, setSearchParams] = useSearchParams();

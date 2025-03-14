@@ -1,98 +1,82 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+import { toast } from "sonner";
+
+export const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
+export const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Missing Supabase URL or Anonymous Key");
+}
+
+export const supabase = createClient(
+  supabaseUrl || "",
+  supabaseAnonKey || ""
+);
 
 /**
- * Creates storage policies for a bucket to make it accessible
- * @param bucketName The name of the bucket to set policies for
+ * Checks if a storage bucket exists, and creates it if it doesn't
  */
-export const createStoragePolicies = async (bucketName: string): Promise<void> => {
+export const ensureBucketExists = async (bucketName: string, isPublic: boolean = false) => {
   try {
-    console.log(`Setting up storage bucket: ${bucketName}`);
-    
-    // Get the current session to check authentication
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    console.log("Current session:", sessionData?.session ? "User authenticated" : "No session", sessionError);
-    
     // First check if bucket exists
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    
-    if (bucketsError) {
-      console.error('Error checking buckets:', bucketsError);
-      throw bucketsError;
-    }
-    
-    console.log("All buckets:", buckets?.map(b => b.name) || []);
-    const bucketExists = buckets?.some(b => b.name === bucketName);
-    console.log("Bucket exists?", bucketExists);
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
     
     if (!bucketExists) {
-      console.log("Creating new bucket:", bucketName);
-      // Create the bucket if it doesn't exist
-      const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,  // Make bucket public
-        fileSizeLimit: 10485760, // 10MB limit
+      console.log(`Creating bucket: ${bucketName}`);
+      const { error } = await supabase.storage.createBucket(bucketName, {
+        public: isPublic,
       });
       
-      if (createError) {
-        console.error("Error creating bucket:", createError);
-        throw createError;
+      if (error) {
+        throw error;
       }
       
-      console.log("Bucket created successfully:", data);
-      
-      // Instead of using RPC, use direct SQL or just update the bucket to be public
-      // which we've already done above with the public: true option
-      console.log(`Public bucket ${bucketName} created successfully`);
-    } else {
-      console.log(`Bucket ${bucketName} already exists`);
-      
-      // Update bucket to ensure it's public
-      const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB limit
-      });
-      
-      if (updateError) {
-        console.error("Error updating bucket:", updateError);
-      } else {
-        console.log(`Bucket ${bucketName} updated to be public`);
+      // If public, set bucket policy
+      if (isPublic) {
+        const { error: policyError } = await supabase.storage.from(bucketName).getPublicUrl('test');
+        if (policyError) {
+          console.error("Failed to set public policy", policyError);
+        }
       }
+      
+      return true;
     }
     
-    // Check bucket permissions by trying to list files
-    try {
-      console.log(`Checking bucket ${bucketName} permissions...`);
-      const { data: listData, error: listError } = await supabase.storage.from(bucketName).list();
-      console.log(`List result for ${bucketName}:`, listData || []);
-      
-      if (listError) {
-        console.error(`List error for ${bucketName}:`, listError);
-      }
-    } catch (listCatchError) {
-      console.error(`Error listing files in bucket ${bucketName}:`, listCatchError);
-    }
-    
-    return;
+    return true;
   } catch (error) {
-    console.error('Error in createStoragePolicies:', error);
-    // Log the error but don't throw it to allow the application to continue
-    return;
+    console.error("Error ensuring bucket exists:", error);
+    return false;
   }
 };
 
 /**
- * Sets up the RLS policies for a bucket using SQL
- * @param bucketName The name of the bucket to set policies for
+ * Set up initial profile for a user
  */
-const setupBucketPolicies = async (bucketName: string): Promise<void> => {
+export const setupInitialProfile = async (userId: string, userData: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: 'proprietaire' | 'client';
+}) => {
   try {
-    console.log(`Setting up RLS policies for bucket ${bucketName}`);
+    const { error } = await supabase.functions.invoke("create_profile", {
+      body: { 
+        user_id: userId,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email,
+        role: userData.role
+      }
+    });
     
-    // This function is now obsolete since we're setting up policies via SQL migration
-    console.log("RLS policies are now set up via SQL migration");
+    if (error) throw error;
     
+    return { success: true };
   } catch (error) {
-    console.error('Error setting up bucket policies:', error);
-    // Log the error but don't throw it
+    console.error("Error setting up profile:", error);
+    toast.error("Erreur lors de la création du profil");
+    return { success: false, error };
   }
 };

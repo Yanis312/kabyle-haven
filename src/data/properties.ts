@@ -1,4 +1,3 @@
-
 export interface Property {
   id: string;
   title: string;
@@ -23,6 +22,9 @@ export interface Property {
     endDate: string;
   };
   cultural_offerings: string[];
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
 }
 
 const properties: Property[] = [
@@ -53,7 +55,9 @@ const properties: Property[] = [
       startDate: "2023-06-01",
       endDate: "2023-09-30"
     },
-    cultural_offerings: ["Repas traditionnel", "Atelier bijoux", "Guide local"]
+    cultural_offerings: ["Repas traditionnel", "Atelier bijoux", "Guide local"],
+    created_at: "2023-01-01T00:00:00Z",
+    status: "available"
   },
   {
     id: "2",

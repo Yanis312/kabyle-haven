@@ -91,6 +91,11 @@
   transition: transform 0.2s;
 }
 
+.property-marker:hover {
+  transform: scale(1.1);
+  z-index: 5;
+}
+
 .property-marker.selected {
   z-index: 10;
 }
