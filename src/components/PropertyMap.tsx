@@ -122,12 +122,14 @@ const PropertyMap = ({
         el.className = "property-marker selected";
         el.querySelector("div")?.classList.add("border-kabyle-blue");
         el.querySelector("div")?.classList.remove("border-kabyle-terracotta");
-        marker.setPopup(marker.getPopup()).togglePopup();
+        marker.togglePopup();
       } else {
         el.className = "property-marker";
         el.querySelector("div")?.classList.remove("border-kabyle-blue");
         el.querySelector("div")?.classList.add("border-kabyle-terracotta");
-        marker.setPopup(marker.getPopup()).togglePopup(false);
+        if (marker.getPopup().isOpen()) {
+          marker.togglePopup();
+        }
       }
     });
   }, [selectedPropertyId, mapLoaded]);

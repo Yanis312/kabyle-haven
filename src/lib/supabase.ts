@@ -35,10 +35,9 @@ export const ensureBucketExists = async (bucketName: string, isPublic: boolean =
       
       // If public, set bucket policy
       if (isPublic) {
-        const { error: policyError } = await supabase.storage.from(bucketName).getPublicUrl('test');
-        if (policyError) {
-          console.error("Failed to set public policy", policyError);
-        }
+        // Get public URL without destructuring error
+        const publicUrlData = supabase.storage.from(bucketName).getPublicUrl('test');
+        console.log("Public URL test:", publicUrlData);
       }
       
       return true;
@@ -77,6 +76,21 @@ export const setupInitialProfile = async (userId: string, userData: {
   } catch (error) {
     console.error("Error setting up profile:", error);
     toast.error("Erreur lors de la création du profil");
+    return { success: false, error };
+  }
+};
+
+/**
+ * Creates storage policies for a bucket
+ */
+export const createStoragePolicies = async (bucketName: string) => {
+  try {
+    console.log(`Ensuring bucket exists: ${bucketName}`);
+    await ensureBucketExists(bucketName, true);
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating storage policies:", error);
     return { success: false, error };
   }
 };

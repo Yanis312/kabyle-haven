@@ -21,14 +21,16 @@ interface Commune {
 interface Property {
   id: string;
   name: string;
-  description: string | null;
+  description?: string;
   price: number;
   capacity: number;
-  images: string[] | null;
-  wilaya_id: number | null;
-  commune_id: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  wilaya_id: number;
+  commune_id: number;
+  owner_id?: string;
+  images?: string[] | null;
+  rating?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface PropertyFormProps {
@@ -67,7 +69,6 @@ const PropertyForm = ({
       setPrice(editingProperty.price.toString());
       setCapacity(editingProperty.capacity.toString());
       
-      // Ensure images array is handled properly
       if (editingProperty.images && Array.isArray(editingProperty.images)) {
         console.log("Setting existing images from property:", editingProperty.images);
         setExistingImages(editingProperty.images);
@@ -94,7 +95,6 @@ const PropertyForm = ({
         commune.wilaya_id === parseInt(selectedWilaya));
       setFilteredCommunes(filtered);
       
-      // Reset commune if wilaya changes
       if (filteredCommunes.length > 0 && !filteredCommunes.some(c => c.id.toString() === selectedCommune)) {
         setSelectedCommune("");
       }

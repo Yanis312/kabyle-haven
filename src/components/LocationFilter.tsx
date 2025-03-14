@@ -68,10 +68,13 @@ const LocationFilter = ({
       setLoadingCommunes(true);
       
       try {
+        // Convert string to number for the query
+        const wilayaId = parseInt(selectedWilaya, 10);
+        
         const { data, error } = await supabase
           .from('communes')
           .select('id, name')
-          .eq('wilaya_id', selectedWilaya)
+          .eq('wilaya_id', wilayaId)
           .order('name', { ascending: true });
           
         if (error) {
