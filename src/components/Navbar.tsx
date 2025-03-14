@@ -26,6 +26,7 @@ import {
   Search
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 
 // Create a simple ModeToggle component to replace the import
 function ModeToggle() {
@@ -51,10 +52,20 @@ function ModeToggle() {
 export default function Navbar() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/?region=${encodeURIComponent(searchTerm.trim())}`);
+    } else {
+      toast.error("Veuillez entrer un terme de recherche");
+    }
   };
 
   return (
@@ -69,7 +80,7 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative w-full">
+          <form onSubmit={handleSearch} className="relative w-full">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -77,8 +88,10 @@ export default function Navbar() {
               type="search" 
               placeholder="Rechercher un logement..." 
               className="w-full pl-10 py-2 border rounded-full bg-background text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
+          </form>
         </div>
         
         <div className="flex items-center space-x-2">

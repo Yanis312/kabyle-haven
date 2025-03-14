@@ -2,17 +2,69 @@
 import { Search, MapPin, Calendar, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import properties from "@/data/properties";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Location {
+  wilaya_id: number;
+  wilaya_name: string;
+  commune_id?: number;
+  commune_name?: string;
+}
 
 const SearchBar = () => {
   const [location, setLocation] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState("");
+  const [locations, setLocations] = useState<Location[]>([]);
   const navigate = useNavigate();
+  
+  // Fetch wilayas and communes on component mount
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        // Fetch wilayas
+        const { data: wilayasData, error: wilayasError } = await supabase
+          .from('wilayas')
+          .select('id, name');
+          
+        if (wilayasError) throw wilayasError;
+        
+        // Fetch communes
+        const { data: communesData, error: communesError } = await supabase
+          .from('communes')
+          .select('id, name, wilaya_id');
+          
+        if (communesError) throw communesError;
+        
+        // Create a combined location list
+        const locationsList: Location[] = [
+          // Add wilayas
+          ...(wilayasData?.map(wilaya => ({
+            wilaya_id: wilaya.id,
+            wilaya_name: wilaya.name
+          })) || []),
+          
+          // Add communes with their wilaya
+          ...(communesData?.map(commune => ({
+            wilaya_id: commune.wilaya_id,
+            wilaya_name: wilayasData?.find(w => w.id === commune.wilaya_id)?.name || "",
+            commune_id: commune.id,
+            commune_name: commune.name
+          })) || [])
+        ];
+        
+        setLocations(locationsList);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+    
+    fetchLocations();
+  }, []);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,18 +74,40 @@ const SearchBar = () => {
       return;
     }
     
-    // Check if the location matches any known village or wilaya
-    const locationMatches = properties.some(
-      property => 
-        property.location.village.toLowerCase().includes(location.toLowerCase()) || 
-        property.location.wilaya.toLowerCase().includes(location.toLowerCase())
+    const locationLower = location.toLowerCase();
+    
+    // Check if the input matches any wilaya or commune
+    const matchingWilaya = locations.find(
+      loc => loc.wilaya_name.toLowerCase().includes(locationLower) && !loc.commune_name
     );
     
-    if (locationMatches) {
-      navigate(`/?region=${location}`);
-      toast.success(`Recherche de logements à ${location}`);
+    const matchingCommune = locations.find(
+      loc => loc.commune_name?.toLowerCase().includes(locationLower)
+    );
+    
+    if (matchingWilaya) {
+      navigate(`/wilaya/${matchingWilaya.wilaya_id}`);
+      toast.success(`Recherche de logements à ${matchingWilaya.wilaya_name}`);
+    } else if (matchingCommune) {
+      navigate(`/commune/${matchingCommune.commune_id}`);
+      toast.success(`Recherche de logements à ${matchingCommune.commune_name}`);
     } else {
-      toast.warning("Aucun logement trouvé dans cette région");
+      // If no exact match, try a broader search
+      const anyMatch = locations.find(
+        loc => 
+          loc.wilaya_name.toLowerCase().includes(locationLower) || 
+          loc.commune_name?.toLowerCase().includes(locationLower)
+      );
+      
+      if (anyMatch) {
+        if (anyMatch.commune_id) {
+          navigate(`/commune/${anyMatch.commune_id}`);
+        } else {
+          navigate(`/wilaya/${anyMatch.wilaya_id}`);
+        }
+      } else {
+        toast.warning("Aucun logement trouvé dans cette région");
+      }
     }
   };
   

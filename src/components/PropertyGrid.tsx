@@ -1,15 +1,19 @@
+
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import PropertyCard from "./PropertyCard";
 import PropertyMap from "./PropertyMap";
 import LocationFilter from "./LocationFilter";
-import properties from "@/data/properties";
 import { Button } from "./ui/button";
-import { Filter, X, MapPin } from "lucide-react";
+import { Filter, X, MapPin, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Property } from "@/data/properties";
 
 const PropertyGrid = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filteredProperties, setFilteredProperties] = useState(properties);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [clearFilters, setClearFilters] = useState(false);
@@ -44,30 +48,74 @@ const PropertyGrid = () => {
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
   
+  // Load properties from Supabase
   useEffect(() => {
-    let filtered = [...properties];
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
+        
+        // Build the query based on filters
+        let query = supabase
+          .from('guesthouses')
+          .select(`
+            *,
+            commune:communes!inner(
+              name,
+              wilaya:wilayas!inner(name)
+            )
+          `);
+        
+        // Apply filters if present
+        if (wilayaFilter) {
+          query = query.eq('wilaya_id', wilayaFilter);
+        }
+        
+        if (communeFilter) {
+          query = query.eq('commune_id', communeFilter);
+        }
+        
+        // Execute the query
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        // Map data to property format
+        const formattedProperties: Property[] = data.map(item => ({
+          id: item.id,
+          title: item.name,
+          description: item.description || "",
+          price: item.price,
+          location: {
+            village: item.commune.name,
+            wilaya: item.commune.wilaya.name
+          },
+          images: item.images || ["/placeholder.svg"],
+          features: [`Capacité: ${item.capacity} personnes`],
+          rating: item.rating || 0,
+          reviewCount: 0,
+          host: {
+            name: "Hôte",
+            avatar: "/placeholder.svg",
+            languages: ["Français", "Kabyle"]
+          },
+          amenities: ["Wi-Fi", "Cuisine équipée", "Parking"],
+          availability: {
+            startDate: "",
+            endDate: ""
+          },
+          cultural_offerings: ["Traditions locales", "Cuisine traditionnelle"]
+        }));
+        
+        setProperties(formattedProperties);
+      } catch (err) {
+        console.error("Error fetching properties:", err);
+        setError("Erreur lors du chargement des propriétés");
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (regionFilter) {
-      filtered = filtered.filter(
-        property => 
-          property.location.village.toLowerCase().includes(regionFilter.toLowerCase()) || 
-          property.location.wilaya.toLowerCase().includes(regionFilter.toLowerCase())
-      );
-    }
-    
-    if (wilayaFilter) {
-      filtered = filtered.filter(
-        property => property.location.wilaya.toLowerCase() === 'tizi ouzou'
-      );
-    }
-    
-    if (communeFilter) {
-      filtered = filtered.filter(
-        property => property.location.village.toLowerCase() === 'ath yenni'
-      );
-    }
-    
-    setFilteredProperties(filtered.length > 0 ? filtered : []);
+    fetchProperties();
     setClearFilters(false);
   }, [regionFilter, wilayaFilter, communeFilter]);
   
@@ -139,7 +187,7 @@ const PropertyGrid = () => {
       {showMap && (
         <div className="mb-8">
           <PropertyMap 
-            properties={filteredProperties}
+            properties={properties}
             selectedPropertyId={selectedPropertyId || undefined}
             onMarkerClick={handleMarkerClick}
             onMarkerHover={handleMarkerHover}
@@ -175,7 +223,22 @@ const PropertyGrid = () => {
         </div>
         
         <div className="md:col-span-3">
-          {filteredProperties.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-12 w-12 animate-spin text-kabyle-blue" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-lg text-red-600">{error}</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={clearFilter}
+              >
+                Réessayer
+              </Button>
+            </div>
+          ) : properties.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-lg text-gray-600">Aucun logement trouvé pour cette recherche.</p>
               <Button 
@@ -188,17 +251,19 @@ const PropertyGrid = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredProperties.map((property) => (
+              {properties.map((property) => (
                 <div 
                   key={property.id} 
                   id={`property-${property.id}`}
                   className={`transition-all duration-300 ${selectedPropertyId === property.id ? 'ring-2 ring-kabyle-blue ring-offset-2' : ''}`}
                   onMouseEnter={() => handlePropertyHover(property.id)}
                 >
-                  <PropertyCard 
-                    property={property}
-                    onHover={() => handlePropertyHover(property.id)} 
-                  />
+                  <Link to={`/property/${property.id}`}>
+                    <PropertyCard 
+                      property={property}
+                      onHover={() => handlePropertyHover(property.id)} 
+                    />
+                  </Link>
                 </div>
               ))}
             </div>
