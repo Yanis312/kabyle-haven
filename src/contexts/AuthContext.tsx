@@ -359,13 +359,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         console.log("User profile data:", profileData);
 
-        if (profileData?.role === "proprietaire") {
-          console.log("Redirecting to host page (proprietaire)");
-          navigate("/host", { replace: true });
-        } else {
-          console.log("Redirecting to home page (client)");
-          navigate("/", { replace: true });
-        }
+        console.log("Redirecting to home page");
+        navigate("/", { replace: true });
         
         toast.success("Connexion réussie!");
       }

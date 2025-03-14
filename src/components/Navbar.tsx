@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import HostDialog from "@/components/HostDialog";
 
 // Create a simple ModeToggle component to replace the import
 function ModeToggle() {
@@ -53,6 +54,7 @@ export default function Navbar() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [hostDialogOpen, setHostDialogOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -161,11 +163,9 @@ export default function Navbar() {
                   <DropdownMenuSeparator />
                   {profile?.role !== 'proprietaire' && (
                     <>
-                      <DropdownMenuItem asChild>
-                        <Link to="/host">
-                          <CirclePlus className="mr-2 h-4 w-4" />
-                          Devenir hôte
-                        </Link>
+                      <DropdownMenuItem onClick={() => setHostDialogOpen(true)}>
+                        <CirclePlus className="mr-2 h-4 w-4" />
+                        Devenir hôte
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
@@ -195,6 +195,9 @@ export default function Navbar() {
           </DropdownMenu>
         </div>
       </div>
+      
+      {/* Dialog pour devenir hôte */}
+      <HostDialog open={hostDialogOpen} onOpenChange={setHostDialogOpen} />
     </header>
   );
 }
