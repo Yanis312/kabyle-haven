@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileInput } from "@/components/ui/file-input";
 import { Separator } from "@/components/ui/separator";
-import { X, ImagePlus, Loader2, Calendar } from "lucide-react";
+import { X, ImagePlus, Loader2, Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import AvailabilityManager from "./AvailabilityManager";
@@ -78,6 +78,21 @@ const PropertyForm = ({
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
   const [activeTab, setActiveTab] = useState("details");
+  const [formIsValid, setFormIsValid] = useState(false);
+  
+  // Check form validity whenever form fields change
+  useEffect(() => {
+    const isValid = 
+      name.trim() !== "" && 
+      price.trim() !== "" && 
+      parseFloat(price) > 0 && 
+      capacity.trim() !== "" && 
+      parseInt(capacity) > 0 && 
+      selectedWilaya !== "" && 
+      selectedCommune !== "";
+    
+    setFormIsValid(isValid);
+  }, [name, price, capacity, selectedWilaya, selectedCommune]);
   
   useEffect(() => {
     if (property) {
@@ -141,9 +156,26 @@ const PropertyForm = ({
     // This will be called when availability is updated
     toast.success("Disponibilité mise à jour");
   };
+  
+  const handleNextClick = () => {
+    if (formIsValid) {
+      setActiveTab("availability");
+    } else {
+      toast.error("Veuillez remplir tous les champs obligatoires avant de continuer");
+    }
+  };
+  
+  const handleSubmitClick = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formIsValid) {
+      onSubmit(e);
+    } else {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+    }
+  };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmitClick} className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="details">Détails du logement</TabsTrigger>
@@ -268,6 +300,34 @@ const PropertyForm = ({
               />
             </div>
           </div>
+          
+          <div className="flex justify-end mt-4">
+            {!property ? (
+              <Button 
+                type="button" 
+                onClick={handleNextClick}
+                disabled={!formIsValid}
+                className="gap-2"
+              >
+                Suivant
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || isUploading || !formIsValid}
+              >
+                {isSubmitting || isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {isUploading ? "Téléchargement des images..." : "Mise à jour..."}
+                  </>
+                ) : (
+                  "Mettre à jour"
+                )}
+              </Button>
+            )}
+          </div>
         </TabsContent>
         
         <TabsContent value="availability" className="pt-4">
@@ -277,9 +337,9 @@ const PropertyForm = ({
               onAvailabilityUpdated={handleAvailabilityUpdated}
             />
           ) : (
-            <div className="text-center p-6 bg-gray-50 border border-dashed border-gray-200 rounded-lg">
+            <div className="text-center p-6 bg-gray-50 border border-dashed border-gray-200 rounded-lg mb-6">
               <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune disponibilité</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Définir la disponibilité</h3>
               <p className="mt-1 text-sm text-gray-500">
                 Vous pourrez définir la disponibilité après avoir créé le logement.
               </p>
@@ -292,19 +352,21 @@ const PropertyForm = ({
       
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" className="dialog-close">Annuler</Button>
-        <Button 
-          type="submit" 
-          disabled={isSubmitting || isUploading}
-        >
-          {isSubmitting || isUploading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {isUploading ? "Téléchargement des images..." : (property ? "Mise à jour..." : "Création...")}
-            </>
-          ) : (
-            property ? "Mettre à jour" : "Créer"
-          )}
-        </Button>
+        {activeTab === "availability" && !property && (
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || isUploading || !formIsValid}
+          >
+            {isSubmitting || isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {isUploading ? "Téléchargement des images..." : "Création..."}
+              </>
+            ) : (
+              "Créer"
+            )}
+          </Button>
+        )}
       </div>
     </form>
   );

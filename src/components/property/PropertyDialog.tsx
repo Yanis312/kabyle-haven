@@ -1,5 +1,5 @@
 
-import { DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PropertyForm from "./PropertyForm";
 import { Property, Wilaya, Commune } from "./PropertyForm";
 

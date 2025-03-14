@@ -7,9 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { fr } from "date-fns/locale";
 import { format, isAfter, startOfDay } from "date-fns";
 import { toast } from "sonner";
-import { CalendarRange, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, X } from "lucide-react";
 import { Property } from "./PropertyForm";
 import { DateRange } from "react-day-picker";
 
