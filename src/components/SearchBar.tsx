@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import regions from "@/data/regions";
 
 interface Location {
   wilaya_id: number;
@@ -13,6 +14,16 @@ interface Location {
   commune_id?: number;
   commune_name?: string;
 }
+
+const normalizeText = (text: string) => {
+  return text
+    .toLowerCase()
+    .normalize("NFD") // Normalize to decomposed form
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+    .replace(/[^a-z0-9 ]/g, "") // Remove special chars
+    .replace(/\s+/g, " ") // Normalize spaces
+    .trim();
+};
 
 const SearchBar = () => {
   const [location, setLocation] = useState("");
@@ -74,15 +85,32 @@ const SearchBar = () => {
       return;
     }
     
-    const locationLower = location.toLowerCase();
+    const normalizedInput = normalizeText(location);
+    
+    // First check regions (like "Ath Yenni")
+    const matchingRegion = regions.find(
+      region => normalizeText(region.name).includes(normalizedInput)
+    );
+    
+    if (matchingRegion) {
+      const regionWilaya = locations.find(
+        loc => normalizeText(loc.wilaya_name).includes(normalizeText(matchingRegion.wilaya))
+      );
+      
+      if (regionWilaya) {
+        navigate(`/wilaya/${regionWilaya.wilaya_id}`);
+        toast.success(`Recherche de logements à ${matchingRegion.name}, ${matchingRegion.wilaya}`);
+        return;
+      }
+    }
     
     // Check if the input matches any wilaya or commune
     const matchingWilaya = locations.find(
-      loc => loc.wilaya_name.toLowerCase().includes(locationLower) && !loc.commune_name
+      loc => normalizeText(loc.wilaya_name).includes(normalizedInput) && !loc.commune_name
     );
     
     const matchingCommune = locations.find(
-      loc => loc.commune_name?.toLowerCase().includes(locationLower)
+      loc => loc.commune_name && normalizeText(loc.commune_name).includes(normalizedInput)
     );
     
     if (matchingWilaya) {
@@ -95,15 +123,17 @@ const SearchBar = () => {
       // If no exact match, try a broader search
       const anyMatch = locations.find(
         loc => 
-          loc.wilaya_name.toLowerCase().includes(locationLower) || 
-          loc.commune_name?.toLowerCase().includes(locationLower)
+          normalizeText(loc.wilaya_name).includes(normalizedInput) || 
+          (loc.commune_name && normalizeText(loc.commune_name).includes(normalizedInput))
       );
       
       if (anyMatch) {
         if (anyMatch.commune_id) {
           navigate(`/commune/${anyMatch.commune_id}`);
+          toast.success(`Recherche de logements à ${anyMatch.commune_name}`);
         } else {
           navigate(`/wilaya/${anyMatch.wilaya_id}`);
+          toast.success(`Recherche de logements à ${anyMatch.wilaya_name}`);
         }
       } else {
         toast.warning("Aucun logement trouvé dans cette région");

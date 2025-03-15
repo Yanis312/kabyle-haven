@@ -5,17 +5,6 @@ import { AlertTriangle } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix Leaflet icon issue in webpack
-useEffect(() => {
-  // Fix Leaflet default icon issue
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png"
-  });
-}, []);
-
 interface PropertyMapProps {
   properties: Property[];
   selectedPropertyId?: string;
@@ -38,6 +27,17 @@ const PropertyMap = ({
   const markers = useRef<{[key: string]: L.Marker}>({});
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+
+  // Fix Leaflet default icon issue
+  useEffect(() => {
+    // Fix Leaflet default icon issue
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png"
+    });
+  }, []);
 
   // Initialize map
   useEffect(() => {
@@ -80,8 +80,7 @@ const PropertyMap = ({
 
     // Add markers for each property
     properties.forEach(property => {
-      // Use stored coordinates from database if available
-      // Otherwise generate random coordinates near Kabylie for demo
+      // Get coordinates, with fallbacks
       const lat = property.latitude || 
                  (property.location?.latitude) || 
                  (36.7169 + (Math.random() - 0.5) * 0.5);
@@ -135,14 +134,21 @@ const PropertyMap = ({
 
     // Fit map to property bounds if there are properties
     if (properties.length > 0) {
-      const bounds = L.latLngBounds(
-        properties.map(property => [
+      const validCoordinates = properties
+        .filter(property => {
+          const lat = property.latitude || property.location?.latitude;
+          const lng = property.longitude || property.location?.longitude;
+          return lat && lng;
+        })
+        .map(property => [
           property.latitude || property.location?.latitude || 36.7169,
           property.longitude || property.location?.longitude || 4.0497
-        ])
-      );
-      
-      map.current.fitBounds(bounds, { padding: [50, 50] });
+        ]);
+        
+      if (validCoordinates.length > 0) {
+        const bounds = L.latLngBounds(validCoordinates as L.LatLngTuple[]);
+        map.current.fitBounds(bounds, { padding: [50, 50] });
+      }
     }
   }, [properties, mapLoaded, selectedPropertyId, onMarkerClick, onMarkerHover, mapError, readOnly]);
 

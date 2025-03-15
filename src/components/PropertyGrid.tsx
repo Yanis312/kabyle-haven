@@ -7,7 +7,7 @@ import { Filter, X, MapPin, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/data/properties";
 import LocationFilter from "./LocationFilter";
-import Map from "./Map";
+import PropertyMap from "./PropertyMap";
 
 const PropertyGrid = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,6 +78,8 @@ const PropertyGrid = () => {
         const { data, error } = await query;
         
         if (error) throw error;
+        
+        console.log("Fetched properties:", data);
         
         // Map data to property format
         const formattedProperties: Property[] = data.map(item => ({
@@ -195,7 +197,7 @@ const PropertyGrid = () => {
       
       {showMap && properties.length > 0 && (
         <div className="mb-8 h-80 rounded-lg overflow-hidden border shadow-sm">
-          <PropertyMapSection 
+          <PropertyMap 
             properties={properties}
             selectedPropertyId={selectedPropertyId || undefined}
             onMarkerClick={handleMarkerClick}
@@ -279,29 +281,6 @@ const PropertyGrid = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-// Internal component to use PropertyMap
-const PropertyMapSection = ({ 
-  properties, 
-  selectedPropertyId, 
-  onMarkerClick, 
-  onMarkerHover 
-}: { 
-  properties: Property[]; 
-  selectedPropertyId?: string; 
-  onMarkerClick: (id: string) => void;
-  onMarkerHover: (id: string) => void;
-}) => {
-  // If we have Leaflet imported directly
-  return (
-    <div className="h-full w-full">
-      <Map 
-        height="h-full" 
-        className="w-full h-full"
-      />
     </div>
   );
 };
