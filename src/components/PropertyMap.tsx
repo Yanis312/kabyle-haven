@@ -48,7 +48,16 @@ const PropertyMap = ({
         // Center on Kabylie region by default
         const kabylieCenter: L.LatLngExpression = [36.7169, 4.0497];
         
-        map.current = L.map(mapContainer.current).setView(kabylieCenter, 8);
+        map.current = L.map(mapContainer.current, {
+          // Désactiver le zoom sur la molette pour éviter les mouvements indésirables
+          scrollWheelZoom: false,
+          // Ajouter des limites de mouvement
+          maxBounds: [
+            [35.0, 2.0], // Sud-ouest
+            [38.0, 6.0]  // Nord-est
+          ],
+          maxBoundsViscosity: 1.0
+        }).setView(kabylieCenter, 8);
         
         // Add OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -151,7 +160,7 @@ const PropertyMap = ({
     // Fit map to property bounds if there are properties with valid coordinates
     if (validCoordinates.length > 0) {
       const bounds = L.latLngBounds(validCoordinates);
-      map.current.fitBounds(bounds, { padding: [50, 50] });
+      map.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
     }
   }, [properties, mapLoaded, selectedPropertyId, onMarkerClick, onMarkerHover, mapError, readOnly]);
 

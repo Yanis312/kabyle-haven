@@ -35,17 +35,58 @@ const PropertyAvailability = ({
     undefined
   );
 
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: property.availability?.startDate ? new Date(property.availability.startDate) : undefined,
-    to: property.availability?.endDate ? new Date(property.availability.endDate) : undefined,
-  });
+  // Déterminer si l'API retourne un format JSON (Supabase) ou un objet JavaScript
+  const getDateRange = () => {
+    if (!property.availability) return { from: undefined, to: undefined };
+    
+    // Cas où availability est un objet JSON de Supabase (format { start_date, end_date })
+    if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      return {
+        from: property.availability.start_date ? new Date(property.availability.start_date) : undefined,
+        to: property.availability.end_date ? new Date(property.availability.end_date) : undefined
+      };
+    }
+    
+    // Cas du format original
+    return {
+      from: property.availability?.startDate ? new Date(property.availability.startDate) : undefined,
+      to: property.availability?.endDate ? new Date(property.availability.endDate) : undefined,
+    };
+  };
 
-  const hasAvailability = property.availability && 
-    property.availability.startDate && 
-    property.availability.endDate;
+  const [dateRange, setDateRange] = useState(getDateRange());
+
+  const hasAvailability = () => {
+    if (!property.availability) return false;
+    
+    // Si c'est un objet JSON de Supabase
+    if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      return !!property.availability.start_date && !!property.availability.end_date;
+    }
+    
+    // Format original
+    return !!property.availability.startDate && !!property.availability.endDate;
+  };
+
+  const getFormattedStartDate = () => {
+    if (!property.availability) return null;
+    
+    if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      return property.availability.start_date ? new Date(property.availability.start_date) : null;
+    }
+    
+    return property.availability.startDate ? new Date(property.availability.startDate) : null;
+  };
+
+  const getFormattedEndDate = () => {
+    if (!property.availability) return null;
+    
+    if (typeof property.availability === 'object' && 'end_date' in property.availability) {
+      return property.availability.end_date ? new Date(property.availability.end_date) : null;
+    }
+    
+    return property.availability.endDate ? new Date(property.availability.endDate) : null;
+  };
 
   const handleSelect = (selectedDateRange: {
     from: Date | undefined;
@@ -58,7 +99,7 @@ const PropertyAvailability = ({
     }
   };
 
-  if (!hasAvailability && !editable) {
+  if (!hasAvailability() && !editable) {
     return (
       <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
         <div className="flex items-center text-gray-500">
@@ -68,6 +109,9 @@ const PropertyAvailability = ({
       </div>
     );
   }
+
+  const startDate = getFormattedStartDate();
+  const endDate = getFormattedEndDate();
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -120,33 +164,42 @@ const PropertyAvailability = ({
         </div>
       ) : (
         <div className="p-4">
-          <div className="flex items-center text-green-700 mb-4">
-            <CheckCircle2 className="h-5 w-5 mr-2 text-green-600" />
-            <p className="font-medium">
-              Ce logement est disponible du {format(new Date(property.availability.startDate), "d MMMM yyyy", { locale: fr })} au {format(new Date(property.availability.endDate), "d MMMM yyyy", { locale: fr })}
-            </p>
-          </div>
-          
-          <Separator className="my-4" />
-          
-          <div className="flex justify-center">
-            <Calendar
-              mode="range"
-              defaultMonth={new Date(property.availability.startDate)}
-              selected={{
-                from: new Date(property.availability.startDate),
-                to: new Date(property.availability.endDate)
-              }}
-              className="pointer-events-none"
-              disabled={[
-                {
-                  before: new Date(property.availability.startDate),
-                  after: new Date(property.availability.endDate)
-                }
-              ]}
-              locale={fr}
-            />
-          </div>
+          {startDate && endDate ? (
+            <>
+              <div className="flex items-center text-green-700 mb-4">
+                <CheckCircle2 className="h-5 w-5 mr-2 text-green-600" />
+                <p className="font-medium">
+                  Ce logement est disponible du {format(startDate, "d MMMM yyyy", { locale: fr })} au {format(endDate, "d MMMM yyyy", { locale: fr })}
+                </p>
+              </div>
+              
+              <Separator className="my-4" />
+              
+              <div className="flex justify-center">
+                <Calendar
+                  mode="range"
+                  defaultMonth={startDate}
+                  selected={{
+                    from: startDate,
+                    to: endDate
+                  }}
+                  className="pointer-events-none"
+                  disabled={[
+                    {
+                      before: startDate,
+                      after: endDate
+                    }
+                  ]}
+                  locale={fr}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center text-gray-500">
+              <AlertCircle className="h-5 w-5 mr-2 text-amber-500" />
+              <p>Aucune information de disponibilité n'a été fournie pour ce logement.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
