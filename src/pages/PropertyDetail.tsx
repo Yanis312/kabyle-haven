@@ -1,3 +1,4 @@
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useParams } from "react-router-dom";
@@ -33,6 +34,7 @@ interface PropertyDetailData {
   images: string[];
   availability: any;
   commune_id: number;
+  owner_id: string;
   commune: {
     name: string;
     wilaya: {
@@ -80,6 +82,7 @@ const PropertyDetail = () => {
         capacity: propertyData.capacity,
         wilaya_id: 0,
         commune_id: propertyData.commune_id,
+        owner_id: propertyData.owner_id,
         location: {
           latitude: 0,
           longitude: 0,
@@ -330,7 +333,7 @@ const PropertyDetail = () => {
                   <PropertyMessageForm 
                     ownerId={property.owner_id}
                     propertyId={property.id}
-                    propertyName={property.name}
+                    propertyName={property.name || property.title || "Logement"}
                   />
                 )}
               </div>
