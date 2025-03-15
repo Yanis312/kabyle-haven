@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, Globe, LogIn, MapPin, User as UserIcon, MessageSquare, User2, Github, HelpCircle } from "lucide-react";
+import { Menu, Globe, LogIn, MapPin, User as UserIcon, MessageSquare, User2, Home, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -28,15 +28,16 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex items-center justify-between h-16 px-4 mx-auto sm:px-6">
         <Link to="/" className="flex items-center">
-          <img src="/logo-airbnb-kabyle.png" alt="Logo Airbnb Kabyle" className="h-8" />
+          <Compass className="h-8 w-8 text-kabyle-terracotta mr-2" />
+          <span className="font-bold text-lg">Airbnb Kabyle</span>
         </Link>
 
         <div className="md:flex items-center hidden">
-          <Link to="/regions" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta">
-            Régions
+          <Link to="/regions" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta flex items-center">
+            <Globe className="h-4 w-4 mr-1" /> Régions
           </Link>
-          <Link to="/wilaya" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta">
-            Wilayas
+          <Link to="/wilaya" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta flex items-center">
+            <MapPin className="h-4 w-4 mr-1" /> Wilayas
           </Link>
         </div>
 
@@ -54,10 +55,10 @@ const Navbar = () => {
                 </SheetHeader>
                 <div className="grid gap-4">
                   <Link to="/regions" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
-                    <MapPin size={16} /> Régions
+                    <Globe size={16} /> Régions
                   </Link>
                   <Link to="/wilaya" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
-                    <Globe size={16} /> Wilayas
+                    <MapPin size={16} /> Wilayas
                   </Link>
                   {/* Add messaging link in mobile menu for all users */}
                   {user && (
@@ -68,7 +69,7 @@ const Navbar = () => {
                   {user && user.role === "proprietaire" && (
                     <>
                       <Link to="/property-management" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
-                        <MapPin size={16} /> Mes logements
+                        <Home size={16} /> Mes logements
                       </Link>
                       <Link to="/booking-management" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
                         <Globe size={16} /> Demandes de réservation
@@ -92,15 +93,15 @@ const Navbar = () => {
             <>
               {user && (
                 <>
-                  {/* Make messaging notification visible for all users (not just property owners) */}
+                  {/* Make messaging notification visible for all users */}
                   <MessagesNotification />
                   {user.role === "proprietaire" && (
                     <>
-                      <Link to="/property-management" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta">
-                        Mes logements
+                      <Link to="/property-management" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta flex items-center">
+                        <Home className="h-4 w-4 mr-1" /> Mes logements
                       </Link>
-                      <Link to="/booking-management" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta">
-                        Demandes de réservation
+                      <Link to="/booking-management" className="mx-2 text-sm font-medium hover:text-kabyle-terracotta flex items-center">
+                        <Globe className="h-4 w-4 mr-1" /> Demandes de réservation
                       </Link>
                     </>
                   )}
@@ -126,20 +127,6 @@ const Navbar = () => {
                         <Link to="/messaging" className="cursor-pointer">
                           <MessageSquare className="mr-2 h-4 w-4" />
                           <span>Messages</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Button variant="ghost" className="w-full justify-start">
-                          <a href="https://github.com/sadmann7/skateshop-demo" target="_blank" rel="noreferrer" className="flex items-center w-full">
-                            <GitHub className="mr-2 h-4 w-4" />
-                            <span>GitHub</span>
-                          </a>
-                        </Button>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="#" className="cursor-pointer">
-                          <HelpCircle className="mr-2 h-4 w-4" />
-                          <span>Aide</span>
                         </Link>
                       </DropdownMenuItem>
                     </>
