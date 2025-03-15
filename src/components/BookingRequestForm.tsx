@@ -30,18 +30,47 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Helper function to safely parse dates
+  const safelyParseDate = (dateValue: any): Date | null => {
+    if (!dateValue) return null;
+    try {
+      return new Date(dateValue);
+    } catch (error) {
+      console.error("Error parsing date:", error);
+      return null;
+    }
+  };
+
   // Check if property has availability data
-  const hasAvailability = property.availability && 
-    property.availability.startDate &&
-    property.availability.endDate;
+  const hasAvailability = () => {
+    if (!property.availability) return false;
+    
+    // If it's a JSON object from Supabase
+    if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      return Boolean(property.availability.start_date) && Boolean(property.availability.end_date);
+    }
+    
+    // Original format
+    return Boolean(property.availability.startDate) && Boolean(property.availability.endDate);
+  };
 
   // Check if dates are available
   const areDatesAvailable = () => {
-    if (!dateRange?.from || !dateRange?.to || !hasAvailability) return false;
+    if (!dateRange?.from || !dateRange?.to || !hasAvailability()) return false;
     
-    // Properly access the nested availability object
-    const availableStart = new Date(property.availability.startDate);
-    const availableEnd = new Date(property.availability.endDate);
+    let availableStart: Date;
+    let availableEnd: Date;
+    
+    // Determine which format of availability data we have
+    if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      availableStart = safelyParseDate(property.availability.start_date) || new Date();
+      availableEnd = safelyParseDate(property.availability.end_date) || new Date();
+    } else if (property.availability) {
+      availableStart = safelyParseDate(property.availability.startDate) || new Date();
+      availableEnd = safelyParseDate(property.availability.endDate) || new Date();
+    } else {
+      return false;
+    }
     
     return (
       !isBefore(dateRange.from, availableStart) &&
@@ -124,6 +153,26 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
+  // Get available date range for the calendar
+  const getAvailableDateRange = () => {
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    
+    if (property.availability) {
+      if ('start_date' in property.availability) {
+        startDate = safelyParseDate(property.availability.start_date);
+        endDate = safelyParseDate(property.availability.end_date);
+      } else {
+        startDate = safelyParseDate(property.availability.startDate);
+        endDate = safelyParseDate(property.availability.endDate);
+      }
+    }
+    
+    return { startDate, endDate };
+  };
+
+  const { startDate: availableStartDate, endDate: availableEndDate } = getAvailableDateRange();
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -140,7 +189,7 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!hasAvailability ? (
+        {!hasAvailability() ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Indisponible</AlertTitle>
@@ -169,11 +218,11 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
               <p className="text-sm text-gray-500">
                 Ce logement est disponible du{" "}
                 <span className="font-medium">
-                  {format(new Date(property.availability.startDate), "d MMMM yyyy", { locale: fr })}
+                  {availableStartDate ? format(availableStartDate, "d MMMM yyyy", { locale: fr }) : "?"}
                 </span>{" "}
                 au{" "}
                 <span className="font-medium">
-                  {format(new Date(property.availability.endDate), "d MMMM yyyy", { locale: fr })}
+                  {availableEndDate ? format(availableEndDate, "d MMMM yyyy", { locale: fr }) : "?"}
                 </span>
               </p>
               <Calendar
@@ -181,12 +230,12 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
                 selected={dateRange}
                 onSelect={setDateRange}
                 className="mx-auto border rounded-md"
-                disabled={[
+                disabled={availableStartDate && availableEndDate ? [
                   {
-                    before: new Date(property.availability.startDate),
-                    after: new Date(property.availability.endDate)
+                    before: availableStartDate,
+                    after: availableEndDate
                   }
-                ]}
+                ] : undefined}
                 locale={fr}
                 initialFocus
               />

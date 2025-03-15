@@ -35,22 +35,33 @@ const PropertyAvailability = ({
     undefined
   );
 
-  // Déterminer si l'API retourne un format JSON (Supabase) ou un objet JavaScript
+  // Helper function to safely convert to date
+  const safelyParseDate = (dateValue: any): Date | undefined => {
+    if (!dateValue) return undefined;
+    try {
+      return new Date(dateValue);
+    } catch (error) {
+      console.error("Error parsing date:", error);
+      return undefined;
+    }
+  };
+
+  // Determine if the API returns a JSON format (Supabase) or a JavaScript object
   const getDateRange = () => {
     if (!property.availability) return { from: undefined, to: undefined };
     
-    // Cas où availability est un objet JSON de Supabase (format { start_date, end_date })
+    // Case where availability is a JSON object from Supabase (format { start_date, end_date })
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
       return {
-        from: property.availability.start_date ? new Date(property.availability.start_date) : undefined,
-        to: property.availability.end_date ? new Date(property.availability.end_date) : undefined
+        from: safelyParseDate(property.availability.start_date),
+        to: safelyParseDate(property.availability.end_date)
       };
     }
     
-    // Cas du format original
+    // Original format case
     return {
-      from: property.availability?.startDate ? new Date(property.availability.startDate) : undefined,
-      to: property.availability?.endDate ? new Date(property.availability.endDate) : undefined,
+      from: safelyParseDate(property.availability.startDate),
+      to: safelyParseDate(property.availability.endDate),
     };
   };
 
@@ -59,33 +70,33 @@ const PropertyAvailability = ({
   const hasAvailability = () => {
     if (!property.availability) return false;
     
-    // Si c'est un objet JSON de Supabase
+    // If it's a JSON object from Supabase
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
-      return !!property.availability.start_date && !!property.availability.end_date;
+      return Boolean(property.availability.start_date) && Boolean(property.availability.end_date);
     }
     
-    // Format original
-    return !!property.availability.startDate && !!property.availability.endDate;
+    // Original format
+    return Boolean(property.availability.startDate) && Boolean(property.availability.endDate);
   };
 
   const getFormattedStartDate = () => {
     if (!property.availability) return null;
     
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
-      return property.availability.start_date ? new Date(property.availability.start_date) : null;
+      return safelyParseDate(property.availability.start_date);
     }
     
-    return property.availability.startDate ? new Date(property.availability.startDate) : null;
+    return safelyParseDate(property.availability.startDate);
   };
 
   const getFormattedEndDate = () => {
     if (!property.availability) return null;
     
     if (typeof property.availability === 'object' && 'end_date' in property.availability) {
-      return property.availability.end_date ? new Date(property.availability.end_date) : null;
+      return safelyParseDate(property.availability.end_date);
     }
     
-    return property.availability.endDate ? new Date(property.availability.endDate) : null;
+    return safelyParseDate(property.availability.endDate);
   };
 
   const handleSelect = (selectedDateRange: {
