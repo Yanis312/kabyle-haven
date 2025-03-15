@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileInput } from "@/components/ui/file-input";
 import { Separator } from "@/components/ui/separator";
-import { X, ImagePlus, Loader2, Save } from "lucide-react";
+import { X, ImagePlus, Loader2, Save, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,6 +16,8 @@ import { format, isAfter, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { Check } from "lucide-react";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 export interface Wilaya {
   id: number;
@@ -48,6 +51,9 @@ export interface Property {
   created_at?: string;
   updated_at?: string;
   availability?: any;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
 }
 
 export interface PropertyFormProps {
@@ -59,6 +65,9 @@ export interface PropertyFormProps {
   onSubmit: (e: React.FormEvent) => void;
   onRemoveImage: (url: string) => void;
 }
+
+// Configure Mapbox access token
+mapboxgl.accessToken = "pk.eyJ1IjoiYWlyYm5iIiwiYSI6ImNqcmg2ZHFxczA4NWk0M3BucTRnOWg5ZjAifQ.j_LaWN2zX5jIUCD8Kx3JXw";
 
 const PropertyForm = ({
   property,
@@ -83,6 +92,15 @@ const PropertyForm = ({
     from: undefined,
     to: undefined
   });
+  
+  // New state for address and coordinates
+  const [address, setAddress] = useState(property?.address || "");
+  const [latitude, setLatitude] = useState<number | undefined>(property?.latitude);
+  const [longitude, setLongitude] = useState<number | undefined>(property?.longitude);
+  const [map, setMap] = useState<mapboxgl.Map | null>(null);
+  const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapContainer = React.useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     if (property?.availability) {
@@ -122,6 +140,9 @@ const PropertyForm = ({
       setDescription(property.description || "");
       setPrice(property.price?.toString() || "");
       setCapacity(property.capacity?.toString() || "");
+      setAddress(property.address || "");
+      setLatitude(property.latitude);
+      setLongitude(property.longitude);
       
       if (property.images && Array.isArray(property.images)) {
         console.log("Setting existing images from property:", property.images);
@@ -157,6 +178,103 @@ const PropertyForm = ({
     }
   }, [selectedWilaya, communes]);
   
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainer.current || mapLoaded) return;
+    
+    try {
+      // Default to center of Kabylie region if no coordinates
+      const defaultLat = 36.7168;
+      const defaultLng = 4.0498;
+      
+      const mapInstance = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [longitude || defaultLng, latitude || defaultLat],
+        zoom: 12,
+      });
+      
+      mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      mapInstance.on("load", () => {
+        setMapLoaded(true);
+        setMap(mapInstance);
+        
+        // Add marker if coordinates exist
+        if (latitude && longitude) {
+          const newMarker = new mapboxgl.Marker({ draggable: true })
+            .setLngLat([longitude, latitude])
+            .addTo(mapInstance);
+            
+          newMarker.on('dragend', () => {
+            const lngLat = newMarker.getLngLat();
+            setLongitude(lngLat.lng);
+            setLatitude(lngLat.lat);
+          });
+          
+          setMarker(newMarker);
+        }
+      });
+      
+      // Click on map to place/move marker
+      mapInstance.on('click', (e) => {
+        const { lng, lat } = e.lngLat;
+        setLongitude(lng);
+        setLatitude(lat);
+        
+        if (marker) {
+          marker.setLngLat([lng, lat]);
+        } else {
+          const newMarker = new mapboxgl.Marker({ draggable: true })
+            .setLngLat([lng, lat])
+            .addTo(mapInstance);
+            
+          newMarker.on('dragend', () => {
+            const lngLat = newMarker.getLngLat();
+            setLongitude(lngLat.lng);
+            setLatitude(lngLat.lat);
+          });
+          
+          setMarker(newMarker);
+        }
+      });
+      
+      return () => {
+        mapInstance.remove();
+      };
+    } catch (error) {
+      console.error("Error initializing map:", error);
+    }
+  }, [mapContainer, mapLoaded]);
+  
+  // Update marker position when coordinates change
+  useEffect(() => {
+    if (!map || !mapLoaded) return;
+    
+    if (latitude && longitude) {
+      if (marker) {
+        marker.setLngLat([longitude, latitude]);
+      } else {
+        const newMarker = new mapboxgl.Marker({ draggable: true })
+          .setLngLat([longitude, latitude])
+          .addTo(map);
+          
+        newMarker.on('dragend', () => {
+          const lngLat = newMarker.getLngLat();
+          setLongitude(lngLat.lng);
+          setLatitude(lngLat.lat);
+        });
+        
+        setMarker(newMarker);
+      }
+      
+      map.flyTo({
+        center: [longitude, latitude],
+        zoom: 12
+      });
+    }
+  }, [latitude, longitude, map, mapLoaded]);
+  
   const resetForm = () => {
     setName("");
     setDescription("");
@@ -167,12 +285,59 @@ const PropertyForm = ({
     setUploadedFiles([]);
     setExistingImages([]);
     setDateRange({ from: undefined, to: undefined });
+    setAddress("");
+    setLatitude(undefined);
+    setLongitude(undefined);
+    
+    // Clear marker
+    if (marker) {
+      marker.remove();
+      setMarker(null);
+    }
   };
   
   const handleRemoveImage = async (url: string) => {
     console.log("Removing image:", url);
     setExistingImages(existingImages.filter(img => img !== url));
     await onRemoveImage(url);
+  };
+
+  const searchAddress = async () => {
+    if (!address.trim()) {
+      toast.error("Veuillez entrer une adresse");
+      return;
+    }
+    
+    try {
+      // Add "Algérie" to improve result accuracy if not already present
+      const searchQuery = address.toLowerCase().includes('algérie') || 
+                         address.toLowerCase().includes('algerie') ? 
+                         address : `${address}, Algérie`;
+      
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxgl.accessToken}`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Erreur de géocodage");
+      }
+      
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        
+        setLongitude(lng);
+        setLatitude(lat);
+        
+        toast.success("Adresse localisée avec succès");
+      } else {
+        toast.error("Adresse non trouvée");
+      }
+    } catch (error) {
+      console.error("Error geocoding address:", error);
+      toast.error("Erreur lors de la recherche de l'adresse");
+    }
   };
 
   const handleSubmitClick = (e: React.FormEvent) => {
@@ -189,6 +354,15 @@ const PropertyForm = ({
     if (availabilityInput) {
       availabilityInput.value = availabilityData ? JSON.stringify(availabilityData) : '';
     }
+    
+    // Add hidden inputs for address and coordinates
+    const addressInput = document.getElementById('property-address') as HTMLInputElement;
+    const latitudeInput = document.getElementById('property-latitude') as HTMLInputElement;
+    const longitudeInput = document.getElementById('property-longitude') as HTMLInputElement;
+    
+    if (addressInput) addressInput.value = address;
+    if (latitudeInput) latitudeInput.value = latitude?.toString() || '';
+    if (longitudeInput) longitudeInput.value = longitude?.toString() || '';
     
     if (formIsValid) {
       onSubmit(e);
@@ -208,6 +382,9 @@ const PropertyForm = ({
           end_date: format(dateRange.to, "yyyy-MM-dd")
         }) : ''}
       />
+      
+      <input type="hidden" id="property-latitude" name="property-latitude" value={latitude?.toString() || ''} />
+      <input type="hidden" id="property-longitude" name="property-longitude" value={longitude?.toString() || ''} />
       
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
@@ -314,6 +491,50 @@ const PropertyForm = ({
             </Select>
           </div>
         </div>
+        
+        <Separator className="my-2" />
+        
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Localisation</h3>
+          
+          <div className="space-y-2">
+            <Label htmlFor="property-address">Adresse</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="property-address"
+                name="property-address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Ex: Rue principale, Tizi Ouzou, Algérie"
+              />
+              <Button 
+                type="button" 
+                onClick={searchAddress}
+                variant="outline"
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Localiser
+              </Button>
+            </div>
+          </div>
+          
+          <div className="h-60 rounded-md border overflow-hidden" ref={mapContainer}>
+            {/* Map will be rendered here */}
+          </div>
+          
+          <div className="text-sm text-gray-500 flex items-center">
+            <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+            <span>
+              {latitude && longitude ? (
+                <>Position: {latitude.toFixed(6)}, {longitude.toFixed(6)}</>
+              ) : (
+                <>Cliquez sur la carte pour définir la position ou entrez une adresse</>
+              )}
+            </span>
+          </div>
+        </div>
+        
+        <Separator className="my-2" />
         
         <div className="space-y-2">
           <Label>Images</Label>

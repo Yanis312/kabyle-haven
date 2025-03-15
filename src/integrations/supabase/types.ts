@@ -93,6 +93,7 @@ export type Database = {
       }
       guesthouses: {
         Row: {
+          address: string | null
           availability: Json | null
           capacity: number
           commune_id: number | null
@@ -100,6 +101,8 @@ export type Database = {
           description: string | null
           id: string
           images: string[] | null
+          latitude: number | null
+          longitude: number | null
           name: string
           owner_id: string | null
           price: number
@@ -108,6 +111,7 @@ export type Database = {
           wilaya_id: number | null
         }
         Insert: {
+          address?: string | null
           availability?: Json | null
           capacity: number
           commune_id?: number | null
@@ -115,6 +119,8 @@ export type Database = {
           description?: string | null
           id?: string
           images?: string[] | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           owner_id?: string | null
           price: number
@@ -123,6 +129,7 @@ export type Database = {
           wilaya_id?: number | null
         }
         Update: {
+          address?: string | null
           availability?: Json | null
           capacity?: number
           commune_id?: number | null
@@ -130,6 +137,8 @@ export type Database = {
           description?: string | null
           id?: string
           images?: string[] | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           owner_id?: string | null
           price?: number

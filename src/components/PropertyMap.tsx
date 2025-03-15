@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -6,7 +5,6 @@ import { Property } from "@/data/properties";
 import { AlertTriangle } from "lucide-react";
 
 // Configure Mapbox with a valid token
-// This token should be replaced with your own Mapbox access token
 mapboxgl.accessToken = "pk.eyJ1IjoiYWlyYm5iIiwiYSI6ImNqcmg2ZHFxczA4NWk0M3BucTRnOWg5ZjAifQ.j_LaWN2zX5jIUCD8Kx3JXw";
 
 interface PropertyMapProps {
@@ -40,6 +38,8 @@ const PropertyMap = ({
         zoom: 8,
       });
 
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
       map.current.on("load", () => {
         setMapLoaded(true);
       });
@@ -71,10 +71,15 @@ const PropertyMap = ({
 
     // Add markers for each property
     properties.forEach(property => {
-      // Generate random coordinates near Kabylie for demo
-      // In a real app, these would come from the database
-      const lat = property.location?.latitude || (36.7 + (Math.random() - 0.5) * 0.5);
-      const lng = property.location?.longitude || (4.2 + (Math.random() - 0.5) * 0.5);
+      // Use stored coordinates from database if available
+      // Otherwise generate random coordinates near Kabylie for demo
+      const lat = property.latitude || 
+                 (property.location?.latitude) || 
+                 (36.7 + (Math.random() - 0.5) * 0.5);
+                 
+      const lng = property.longitude || 
+                 (property.location?.longitude) || 
+                 (4.2 + (Math.random() - 0.5) * 0.5);
 
       // Create marker element
       const el = document.createElement("div");
@@ -93,6 +98,7 @@ const PropertyMap = ({
             `<div class="p-2">
               <h3 class="font-bold text-sm">${property.title || property.name}</h3>
               <p class="text-xs">${property.price} DA / nuit</p>
+              ${property.address ? `<p class="text-xs mt-1">${property.address}</p>` : ''}
             </div>`
           )
         )

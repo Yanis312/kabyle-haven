@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import PropertyCard from "./PropertyCard";
@@ -90,8 +89,8 @@ const PropertyGrid = () => {
           wilaya_id: item.wilaya_id || 0,
           commune_id: item.commune_id || 0,
           location: {
-            latitude: 0, // Placeholder
-            longitude: 0, // Placeholder
+            latitude: item.latitude || 0,
+            longitude: item.longitude || 0,
             village: item.commune.name,
             wilaya: item.commune.wilaya.name
           },
@@ -105,11 +104,14 @@ const PropertyGrid = () => {
             languages: ["Français", "Kabyle"]
           },
           amenities: ["Wi-Fi", "Cuisine équipée", "Parking"],
-          availability: {
+          availability: item.availability || {
             startDate: "",
             endDate: ""
           },
-          cultural_offerings: ["Traditions locales", "Cuisine traditionnelle"]
+          cultural_offerings: ["Traditions locales", "Cuisine traditionnelle"],
+          latitude: item.latitude,
+          longitude: item.longitude,
+          address: item.address
         }));
         
         setProperties(formattedProperties);

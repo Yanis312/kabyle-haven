@@ -201,6 +201,10 @@ const PropertyManagement = () => {
     const price = form.querySelector<HTMLInputElement>('#property-price')?.value;
     const capacity = form.querySelector<HTMLInputElement>('#property-capacity')?.value;
     
+    const address = form.querySelector<HTMLInputElement>('#property-address')?.value || '';
+    const latitude = form.querySelector<HTMLInputElement>('#property-latitude')?.value;
+    const longitude = form.querySelector<HTMLInputElement>('#property-longitude')?.value;
+    
     const selectElements = form.querySelectorAll('select');
     let selectedWilaya = '';
     let selectedCommune = '';
@@ -224,7 +228,17 @@ const PropertyManagement = () => {
       }
     }
     
-    console.log("Form values:", { name, price, capacity, selectedWilaya, selectedCommune, availability });
+    console.log("Form values:", { 
+      name, 
+      price, 
+      capacity, 
+      selectedWilaya, 
+      selectedCommune, 
+      availability,
+      address,
+      latitude,
+      longitude
+    });
     
     if (!name || !price || !capacity || !selectedWilaya || !selectedCommune) {
       toast.error("Veuillez remplir tous les champs obligatoires");
@@ -307,12 +321,20 @@ const PropertyManagement = () => {
         commune_id: parseInt(selectedCommune),
         owner_id: user.id,
         images: allImages.length > 0 ? allImages : null,
-        availability: availability
+        availability: availability,
+        address: address || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null
       };
       
       console.log("Saving property data:", propertyData);
       console.log("Images array being saved:", propertyData.images);
       console.log("Availability being saved:", propertyData.availability);
+      console.log("Location being saved:", {
+        address: propertyData.address,
+        latitude: propertyData.latitude,
+        longitude: propertyData.longitude
+      });
       
       let result;
       
