@@ -1,4 +1,3 @@
-
 export interface Wilaya {
   id: number;
   name: string;
@@ -51,6 +50,9 @@ export interface Property {
   host?: PropertyHost;
   amenities?: string[];
   cultural_offerings?: string[];
+  latitude?: number;
+  longitude?: number;
+  address?: string;
 }
 
 export const properties: Property[] = [
