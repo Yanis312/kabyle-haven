@@ -91,6 +91,72 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          last_message_at: string
+          owner_id: string
+          property_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          owner_id: string
+          property_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          owner_id?: string
+          property_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "user_unread_messages"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "conversations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_unread_messages"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "conversations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "guesthouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guesthouses: {
         Row: {
           address: string | null
@@ -162,11 +228,67 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "guesthouses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_unread_messages"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "guesthouses_wilaya_id_fkey"
             columns: ["wilaya_id"]
             isOneToOne: false
             referencedRelation: "wilayas"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["message_status"]
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["message_status"]
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["message_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "user_unread_messages"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -226,7 +348,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_unread_messages: {
+        Row: {
+          unread_count: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_profile: {
@@ -241,6 +369,7 @@ export type Database = {
       }
     }
     Enums: {
+      message_status: "sent" | "delivered" | "seen"
       user_role: "client" | "proprietaire"
     }
     CompositeTypes: {

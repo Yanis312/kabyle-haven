@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import Map from "@/components/Map";
+import PropertyMessageForm from "@/components/messaging/PropertyMessageForm";
 
 interface PropertyDetailData {
   id: string;
@@ -45,7 +46,6 @@ const PropertyDetail = () => {
   const [property, setProperty] = useState<Property | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   
-  // Fetch property data from Supabase
   const { data: propertyData, isLoading, error } = useQuery({
     queryKey: ['property', id],
     queryFn: async () => {
@@ -69,7 +69,6 @@ const PropertyDetail = () => {
     enabled: !!id,
   });
   
-  // Transform Supabase data to match Property interface
   useEffect(() => {
     if (propertyData) {
       const transformedProperty: Property = {
@@ -79,11 +78,11 @@ const PropertyDetail = () => {
         description: propertyData.description || "",
         price: propertyData.price,
         capacity: propertyData.capacity,
-        wilaya_id: 0, // Placeholder
+        wilaya_id: 0,
         commune_id: propertyData.commune_id,
         location: {
-          latitude: 0, // Placeholder
-          longitude: 0, // Placeholder
+          latitude: 0,
+          longitude: 0,
           village: propertyData.commune.name,
           wilaya: propertyData.commune.wilaya.name
         },
@@ -91,7 +90,6 @@ const PropertyDetail = () => {
         features: [`Capacité: ${propertyData.capacity} personnes`],
         rating: propertyData.rating || 0,
         reviewCount: 0,
-        // Default values for required properties
         host: {
           name: "Hôte",
           avatar: "/placeholder.svg",
@@ -106,7 +104,6 @@ const PropertyDetail = () => {
     }
   }, [propertyData]);
   
-  // Fallback to static data if needed (during development/transition)
   useEffect(() => {
     if (id && !propertyData && !isLoading) {
       const foundProperty = properties.find(p => p.id === id);
@@ -159,16 +156,14 @@ const PropertyDetail = () => {
     );
   }
   
-  // Helper function to get display title
   const displayTitle = property.title || property.name;
   
   return (
-    <div className="min-h-screen flex flex-col">
+    <>
       <Navbar />
       
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-8">
-          {/* Property title and location */}
+        <div className="container mx-auto px-4 pb-12">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-bold">{displayTitle}</h1>
@@ -201,7 +196,6 @@ const PropertyDetail = () => {
             </div>
           </div>
           
-          {/* Image carousel gallery */}
           <div className="mb-8">
             <Carousel className="w-full">
               <CarouselContent>
@@ -222,11 +216,8 @@ const PropertyDetail = () => {
             </Carousel>
           </div>
           
-          {/* Main content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Left column - Property details */}
             <div className="lg:col-span-2">
-              {/* Host info */}
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-xl font-semibold">
@@ -250,7 +241,6 @@ const PropertyDetail = () => {
               
               <Separator className="my-6" />
               
-              {/* Features */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {property.features && property.features.map((feature, index) => (
                   <div key={index} className="flex items-center p-4 bg-gray-50 rounded-lg">
@@ -262,7 +252,6 @@ const PropertyDetail = () => {
                 ))}
               </div>
               
-              {/* Description */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">À propos de ce logement</h3>
                 <p className="text-gray-600 whitespace-pre-line">{property.description}</p>
@@ -270,7 +259,6 @@ const PropertyDetail = () => {
               
               <Separator className="my-6" />
               
-              {/* Amenities */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">Ce que propose ce logement</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -287,7 +275,6 @@ const PropertyDetail = () => {
               
               <Separator className="my-6" />
               
-              {/* Cultural offerings */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">Expériences culturelles</h3>
                 <div className="grid grid-cols-1 gap-4">
@@ -305,13 +292,11 @@ const PropertyDetail = () => {
                 </div>
               </div>
               
-              {/* Availability Calendar */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold mb-3">Disponibilité</h3>
                 <PropertyAvailability property={property} />
               </div>
               
-              {/* Location Map */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold mb-3">Emplacement</h3>
                 <div className="h-80 rounded-lg overflow-hidden border shadow-sm">
@@ -337,10 +322,17 @@ const PropertyDetail = () => {
               </div>
             </div>
             
-            {/* Right column - Booking */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24">
+              <div className="sticky top-24 space-y-4">
                 <BookingRequestForm property={property} />
+                
+                {property && property.owner_id && (
+                  <PropertyMessageForm 
+                    ownerId={property.owner_id}
+                    propertyId={property.id}
+                    propertyName={property.name}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -348,7 +340,7 @@ const PropertyDetail = () => {
       </main>
       
       <Footer />
-    </div>
+    </>
   );
 };
 
