@@ -2,11 +2,12 @@
 import { useEffect } from "react";
 import { useMessaging } from "@/contexts/MessagingContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ConversationItem from "@/components/messaging/ConversationItem";
 import ConversationView from "@/components/messaging/ConversationView";
-import { Inbox, Loader2 } from "lucide-react";
+import { ArrowLeft, Inbox, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const MessagingPage = () => {
   const { user, loading } = useAuth();
@@ -16,6 +17,7 @@ const MessagingPage = () => {
     setCurrentConversation, 
     loadingConversations 
   } = useMessaging();
+  const navigate = useNavigate();
   
   // Set first conversation as current if none selected
   useEffect(() => {
@@ -23,6 +25,10 @@ const MessagingPage = () => {
       setCurrentConversation(conversations[0]);
     }
   }, [conversations, currentConversation, setCurrentConversation]);
+  
+  const handleBackClick = () => {
+    navigate(-1); // Go back to the previous page
+  };
   
   if (loading) {
     return (
@@ -38,7 +44,20 @@ const MessagingPage = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Messages</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="mr-2"
+            onClick={handleBackClick}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <h1 className="text-3xl font-bold">Messages</h1>
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[70vh] border rounded-lg overflow-hidden">
         {/* Conversations List */}

@@ -1,10 +1,9 @@
-
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Property, properties } from "@/data/properties";
-import { Calendar, Heart, MapPin, Star, User, Users } from "lucide-react";
+import { Calendar, Heart, MapPin, MessageSquare, Star, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -183,7 +182,24 @@ const PropertyDetail = () => {
               </div>
             </div>
             
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              {property && property.owner_id && (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="flex items-center bg-kabyle-terracotta hover:bg-kabyle-terracotta/90"
+                  onClick={() => {
+                    const contactForm = document.getElementById('contact-owner-form');
+                    if (contactForm) {
+                      contactForm.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Contacter le propriétaire
+                </Button>
+              )}
+              
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -197,6 +213,22 @@ const PropertyDetail = () => {
                 {isFavorite ? "Sauvegardé" : "Sauvegarder"}
               </Button>
             </div>
+          </div>
+          
+          <div className="md:hidden mb-6">
+            {property && property.owner_id && (
+              <div className="border rounded-lg p-4 bg-kabyle-terracotta/5 border-kabyle-terracotta/20">
+                <h3 className="font-medium text-lg mb-2 flex items-center">
+                  <MessageSquare className="h-5 w-5 mr-2 text-kabyle-terracotta" />
+                  Contacter le propriétaire
+                </h3>
+                <PropertyMessageForm 
+                  ownerId={property.owner_id}
+                  propertyId={property.id}
+                  propertyName={property.name || property.title || "Logement"}
+                />
+              </div>
+            )}
           </div>
           
           <div className="mb-8">
@@ -243,6 +275,22 @@ const PropertyDetail = () => {
               </div>
               
               <Separator className="my-6" />
+              
+              <div className="hidden md:block mb-6">
+                {property && property.owner_id && (
+                  <div id="contact-owner-form" className="border rounded-lg p-4 bg-kabyle-terracotta/5 border-kabyle-terracotta/20 mb-6">
+                    <h3 className="font-medium text-lg mb-2 flex items-center">
+                      <MessageSquare className="h-5 w-5 mr-2 text-kabyle-terracotta" />
+                      Contacter le propriétaire
+                    </h3>
+                    <PropertyMessageForm 
+                      ownerId={property.owner_id}
+                      propertyId={property.id}
+                      propertyName={property.name || property.title || "Logement"}
+                    />
+                  </div>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {property.features && property.features.map((feature, index) => (
@@ -329,13 +377,24 @@ const PropertyDetail = () => {
               <div className="sticky top-24 space-y-4">
                 <BookingRequestForm property={property} />
                 
-                {property && property.owner_id && (
-                  <PropertyMessageForm 
-                    ownerId={property.owner_id}
-                    propertyId={property.id}
-                    propertyName={property.name || property.title || "Logement"}
-                  />
-                )}
+                <div className="hidden md:block">
+                  {property && property.owner_id && (
+                    <div className="p-4 text-center">
+                      <Button 
+                        className="w-full bg-kabyle-terracotta hover:bg-kabyle-terracotta/90"
+                        onClick={() => {
+                          const contactForm = document.getElementById('contact-owner-form');
+                          if (contactForm) {
+                            contactForm.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Contacter le propriétaire
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, Globe, LogIn, MapPin, User as UserIcon, MessageSquare, User2, Github, HelpCircle } from "lucide-react";
+import { Menu, Globe, LogIn, MapPin, User as UserIcon, MessageSquare, User2, GitHub, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -12,7 +12,6 @@ import MessagesNotification from "@/components/messaging/MessagesNotification";
 const Navbar = () => {
   const [isMobile, setIsMobile] = useState(false);
   const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
@@ -60,15 +59,12 @@ const Navbar = () => {
                   <Link to="/wilaya" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
                     <Globe size={16} /> Wilayas
                   </Link>
-                  {/* Add messaging link in mobile menu */}
-                  <Link to="/messaging" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
-                    <MessageSquare size={16} /> Messages
-                    {user && unreadCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto">
-                        {unreadCount}
-                      </Badge>
-                    )}
-                  </Link>
+                  {/* Add messaging link in mobile menu for all users */}
+                  {user && (
+                    <Link to="/messaging" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
+                      <MessageSquare size={16} /> Messages
+                    </Link>
+                  )}
                   {user && user.role === "proprietaire" && (
                     <>
                       <Link to="/property-management" className="flex items-center gap-2 py-2 hover:text-kabyle-terracotta">
@@ -96,7 +92,7 @@ const Navbar = () => {
             <>
               {user && (
                 <>
-                  {/* Add messages notification to desktop navbar */}
+                  {/* Make messaging notification visible for all users (not just property owners) */}
                   <MessagesNotification />
                   {user.role === "proprietaire" && (
                     <>
@@ -130,17 +126,12 @@ const Navbar = () => {
                         <Link to="/messaging" className="cursor-pointer">
                           <MessageSquare className="mr-2 h-4 w-4" />
                           <span>Messages</span>
-                          {unreadCount > 0 && (
-                            <Badge variant="destructive" className="ml-2">
-                              {unreadCount}
-                            </Badge>
-                          )}
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Button variant="ghost" className="w-full justify-start">
                           <a href="https://github.com/sadmann7/skateshop-demo" target="_blank" rel="noreferrer" className="flex items-center w-full">
-                            <Github className="mr-2 h-4 w-4" />
+                            <GitHub className="mr-2 h-4 w-4" />
                             <span>GitHub</span>
                           </a>
                         </Button>
