@@ -70,6 +70,25 @@ const PropertyMap = ({
     };
   }, []);
 
+  // Helper function to get valid coordinates from a property
+  const getValidCoordinates = (property: Property): L.LatLngExpression => {
+    // Ordered priority for coordinate sources
+    // 1. Direct latitude/longitude on the property
+    if (typeof property.latitude === 'number' && typeof property.longitude === 'number') {
+      return [property.latitude, property.longitude];
+    }
+    
+    // 2. Location object with latitude/longitude
+    if (property.location?.latitude && property.location?.longitude) {
+      return [property.location.latitude, property.location.longitude];
+    }
+    
+    // 3. Generate random coordinates near Kabylie region as fallback
+    const randomLat = 36.7169 + (Math.random() - 0.5) * 0.5;
+    const randomLng = 4.0497 + (Math.random() - 0.5) * 0.5;
+    return [randomLat, randomLng];
+  };
+
   // Add/update markers when properties change
   useEffect(() => {
     if (!map.current || !mapLoaded || properties.length === 0 || mapError) return;
@@ -78,16 +97,13 @@ const PropertyMap = ({
     Object.values(markers.current).forEach(marker => marker.remove());
     markers.current = {};
 
+    // Track valid coordinates for map bounds
+    const validCoordinates: L.LatLngTuple[] = [];
+
     // Add markers for each property
     properties.forEach(property => {
-      // Get coordinates, with fallbacks
-      const lat = property.latitude || 
-                 (property.location?.latitude) || 
-                 (36.7169 + (Math.random() - 0.5) * 0.5);
-                 
-      const lng = property.longitude || 
-                 (property.location?.longitude) || 
-                 (4.0497 + (Math.random() - 0.5) * 0.5);
+      const coordinates = getValidCoordinates(property);
+      validCoordinates.push(coordinates as L.LatLngTuple);
 
       // Create custom icon for markers
       const customIcon = L.divIcon({
@@ -102,7 +118,7 @@ const PropertyMap = ({
       });
 
       // Create and add the marker
-      const marker = L.marker([lat, lng], { icon: customIcon });
+      const marker = L.marker(coordinates, { icon: customIcon });
       
       // Create popup with property info
       const popupContent = `
@@ -132,23 +148,10 @@ const PropertyMap = ({
       markers.current[property.id] = marker;
     });
 
-    // Fit map to property bounds if there are properties
-    if (properties.length > 0) {
-      const validCoordinates = properties
-        .filter(property => {
-          const lat = property.latitude || property.location?.latitude;
-          const lng = property.longitude || property.location?.longitude;
-          return lat && lng;
-        })
-        .map(property => [
-          property.latitude || property.location?.latitude || 36.7169,
-          property.longitude || property.location?.longitude || 4.0497
-        ]);
-        
-      if (validCoordinates.length > 0) {
-        const bounds = L.latLngBounds(validCoordinates as L.LatLngTuple[]);
-        map.current.fitBounds(bounds, { padding: [50, 50] });
-      }
+    // Fit map to property bounds if there are properties with valid coordinates
+    if (validCoordinates.length > 0) {
+      const bounds = L.latLngBounds(validCoordinates);
+      map.current.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [properties, mapLoaded, selectedPropertyId, onMarkerClick, onMarkerHover, mapError, readOnly]);
 

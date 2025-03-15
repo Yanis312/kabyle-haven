@@ -1,7 +1,8 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { toast } from "sonner";
 
 interface MapProps {
   latitude?: number;
@@ -11,6 +12,16 @@ interface MapProps {
   height?: string;
   className?: string;
 }
+
+// Fonction d'aide pour normaliser les chaînes de recherche
+const normalizeSearchString = (input: string): string => {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['",.]/g, "")
+    .trim();
+};
 
 const Map = ({ 
   latitude = 36.7169, 
@@ -23,6 +34,7 @@ const Map = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const marker = useRef<L.Marker | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -132,7 +144,7 @@ const Map = ({
   return (
     <div 
       ref={mapContainer} 
-      className={`${height} rounded-md border overflow-hidden ${className}`}
+      className={`${height} rounded-md border overflow-hidden ${className} ${searchError ? 'border-red-300' : ''}`}
     />
   );
 };

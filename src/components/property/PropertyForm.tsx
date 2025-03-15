@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -89,7 +88,6 @@ const PropertyForm = ({
     to: undefined
   });
   
-  // New state for address and coordinates
   const [address, setAddress] = useState(property?.address || "");
   const [latitude, setLatitude] = useState<number | undefined>(property?.latitude);
   const [longitude, setLongitude] = useState<number | undefined>(property?.longitude);
@@ -198,32 +196,89 @@ const PropertyForm = ({
     }
     
     try {
-      // Add "Algérie" to improve result accuracy if not already present
-      const searchQuery = address.toLowerCase().includes('algérie') || 
-                         address.toLowerCase().includes('algerie') ? 
-                         address : `${address}, Algérie`;
+      const normalizedAddress = address
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
       
-      // Using Nominatim (OpenStreetMap) geocoding service
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
-      );
+      const searchQueries = [
+        `${address}, Algérie`,
+        `${normalizedAddress}, algerie`,
+        address,
+        address.includes('Ath') || address.includes('ath') 
+          ? address.replace('Ath', 'Ait').replace('ath', 'ait') + ', Algérie' 
+          : null,
+        address.includes('Yanni') || address.includes('yanni')
+          ? 'Ait Yenni, Tizi Ouzou, Algérie'
+          : null
+      ].filter(Boolean);
       
-      if (!response.ok) {
-        throw new Error("Erreur de géocodage");
+      let found = false;
+      
+      for (const query of searchQueries) {
+        if (found) break;
+        
+        console.log(`Trying to geocode address with query: ${query}`);
+        
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query as string)}`
+        );
+        
+        if (!response.ok) {
+          console.log(`Error response from geocoding service for query: ${query}`);
+          continue;
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+          
+          setLatitude(lat);
+          setLongitude(lng);
+          
+          toast.success("Adresse localisée avec succès");
+          found = true;
+          break;
+        } else {
+          console.log(`No results found for query: ${query}`);
+        }
       }
       
-      const data = await response.json();
+      if (!found) {
+        if (selectedWilaya && selectedCommune) {
+          const wilayaName = wilayas.find(w => w.id.toString() === selectedWilaya)?.name;
+          const communeName = communes.find(c => c.id.toString() === selectedCommune)?.name;
+          
+          if (wilayaName && communeName) {
+            const fallbackQuery = `${communeName}, ${wilayaName}, Algérie`;
+            console.log(`Trying commune-based fallback: ${fallbackQuery}`);
+            
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}`
+            );
+            
+            if (response.ok) {
+              const data = await response.json();
+              
+              if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
+                
+                setLatitude(lat);
+                setLongitude(lng);
+                
+                toast.success("Localisation approximative basée sur la commune");
+                found = true;
+              }
+            }
+          }
+        }
+      }
       
-      if (data && data.length > 0) {
-        const lat = parseFloat(data[0].lat);
-        const lng = parseFloat(data[0].lon);
-        
-        setLatitude(lat);
-        setLongitude(lng);
-        
-        toast.success("Adresse localisée avec succès");
-      } else {
-        toast.error("Adresse non trouvée");
+      if (!found) {
+        toast.error("Adresse non trouvée. Essayez avec le format: Ville, Wilaya, Algérie");
       }
     } catch (error) {
       console.error("Error geocoding address:", error);
@@ -251,7 +306,6 @@ const PropertyForm = ({
       availabilityInput.value = availabilityData ? JSON.stringify(availabilityData) : '';
     }
     
-    // Add hidden inputs for address and coordinates
     const addressInput = document.getElementById('property-address') as HTMLInputElement;
     const latitudeInput = document.getElementById('property-latitude') as HTMLInputElement;
     const longitudeInput = document.getElementById('property-longitude') as HTMLInputElement;
