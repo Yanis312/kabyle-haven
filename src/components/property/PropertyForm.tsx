@@ -16,8 +16,7 @@ import { format, isAfter, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { Check } from "lucide-react";
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import Map from "@/components/Map";
 
 export interface Wilaya {
   id: number;
@@ -66,9 +65,6 @@ export interface PropertyFormProps {
   onRemoveImage: (url: string) => void;
 }
 
-// Configure Mapbox access token
-mapboxgl.accessToken = "pk.eyJ1IjoiYWlyYm5iIiwiYSI6ImNqcmg2ZHFxczA4NWk0M3BucTRnOWg5ZjAifQ.j_LaWN2zX5jIUCD8Kx3JXw";
-
 const PropertyForm = ({
   property,
   wilayas,
@@ -97,10 +93,6 @@ const PropertyForm = ({
   const [address, setAddress] = useState(property?.address || "");
   const [latitude, setLatitude] = useState<number | undefined>(property?.latitude);
   const [longitude, setLongitude] = useState<number | undefined>(property?.longitude);
-  const [map, setMap] = useState<mapboxgl.Map | null>(null);
-  const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const mapContainer = React.useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     if (property?.availability) {
@@ -178,103 +170,6 @@ const PropertyForm = ({
     }
   }, [selectedWilaya, communes]);
   
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainer.current || mapLoaded) return;
-    
-    try {
-      // Default to center of Kabylie region if no coordinates
-      const defaultLat = 36.7168;
-      const defaultLng = 4.0498;
-      
-      const mapInstance = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/mapbox/streets-v11",
-        center: [longitude || defaultLng, latitude || defaultLat],
-        zoom: 12,
-      });
-      
-      mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      
-      mapInstance.on("load", () => {
-        setMapLoaded(true);
-        setMap(mapInstance);
-        
-        // Add marker if coordinates exist
-        if (latitude && longitude) {
-          const newMarker = new mapboxgl.Marker({ draggable: true })
-            .setLngLat([longitude, latitude])
-            .addTo(mapInstance);
-            
-          newMarker.on('dragend', () => {
-            const lngLat = newMarker.getLngLat();
-            setLongitude(lngLat.lng);
-            setLatitude(lngLat.lat);
-          });
-          
-          setMarker(newMarker);
-        }
-      });
-      
-      // Click on map to place/move marker
-      mapInstance.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
-        setLongitude(lng);
-        setLatitude(lat);
-        
-        if (marker) {
-          marker.setLngLat([lng, lat]);
-        } else {
-          const newMarker = new mapboxgl.Marker({ draggable: true })
-            .setLngLat([lng, lat])
-            .addTo(mapInstance);
-            
-          newMarker.on('dragend', () => {
-            const lngLat = newMarker.getLngLat();
-            setLongitude(lngLat.lng);
-            setLatitude(lngLat.lat);
-          });
-          
-          setMarker(newMarker);
-        }
-      });
-      
-      return () => {
-        mapInstance.remove();
-      };
-    } catch (error) {
-      console.error("Error initializing map:", error);
-    }
-  }, [mapContainer, mapLoaded]);
-  
-  // Update marker position when coordinates change
-  useEffect(() => {
-    if (!map || !mapLoaded) return;
-    
-    if (latitude && longitude) {
-      if (marker) {
-        marker.setLngLat([longitude, latitude]);
-      } else {
-        const newMarker = new mapboxgl.Marker({ draggable: true })
-          .setLngLat([longitude, latitude])
-          .addTo(map);
-          
-        newMarker.on('dragend', () => {
-          const lngLat = newMarker.getLngLat();
-          setLongitude(lngLat.lng);
-          setLatitude(lngLat.lat);
-        });
-        
-        setMarker(newMarker);
-      }
-      
-      map.flyTo({
-        center: [longitude, latitude],
-        zoom: 12
-      });
-    }
-  }, [latitude, longitude, map, mapLoaded]);
-  
   const resetForm = () => {
     setName("");
     setDescription("");
@@ -288,12 +183,6 @@ const PropertyForm = ({
     setAddress("");
     setLatitude(undefined);
     setLongitude(undefined);
-    
-    // Clear marker
-    if (marker) {
-      marker.remove();
-      setMarker(null);
-    }
   };
   
   const handleRemoveImage = async (url: string) => {
@@ -314,8 +203,9 @@ const PropertyForm = ({
                          address.toLowerCase().includes('algerie') ? 
                          address : `${address}, Algérie`;
       
+      // Using Nominatim (OpenStreetMap) geocoding service
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxgl.accessToken}`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
       );
       
       if (!response.ok) {
@@ -324,11 +214,12 @@ const PropertyForm = ({
       
       const data = await response.json();
       
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
         
-        setLongitude(lng);
         setLatitude(lat);
+        setLongitude(lng);
         
         toast.success("Adresse localisée avec succès");
       } else {
@@ -338,6 +229,11 @@ const PropertyForm = ({
       console.error("Error geocoding address:", error);
       toast.error("Erreur lors de la recherche de l'adresse");
     }
+  };
+
+  const handleMapPositionChange = (lat: number, lng: number) => {
+    setLatitude(lat);
+    setLongitude(lng);
   };
 
   const handleSubmitClick = (e: React.FormEvent) => {
@@ -518,9 +414,12 @@ const PropertyForm = ({
             </div>
           </div>
           
-          <div className="h-60 rounded-md border overflow-hidden" ref={mapContainer}>
-            {/* Map will be rendered here */}
-          </div>
+          <Map 
+            latitude={latitude} 
+            longitude={longitude} 
+            onChange={handleMapPositionChange}
+            height="h-60"
+          />
           
           <div className="text-sm text-gray-500 flex items-center">
             <MapPin className="h-4 w-4 mr-1 text-gray-400" />

@@ -1,12 +1,13 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import PropertyCard from "./PropertyCard";
-import PropertyMap from "./PropertyMap";
-import LocationFilter from "./LocationFilter";
 import { Button } from "./ui/button";
 import { Filter, X, MapPin, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Property } from "@/data/properties";
+import LocationFilter from "./LocationFilter";
+import Map from "./Map";
 
 const PropertyGrid = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -192,9 +193,9 @@ const PropertyGrid = () => {
         </div>
       </div>
       
-      {showMap && (
-        <div className="mb-8">
-          <PropertyMap 
+      {showMap && properties.length > 0 && (
+        <div className="mb-8 h-80 rounded-lg overflow-hidden border shadow-sm">
+          <PropertyMapSection 
             properties={properties}
             selectedPropertyId={selectedPropertyId || undefined}
             onMarkerClick={handleMarkerClick}
@@ -278,6 +279,29 @@ const PropertyGrid = () => {
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// Internal component to use PropertyMap
+const PropertyMapSection = ({ 
+  properties, 
+  selectedPropertyId, 
+  onMarkerClick, 
+  onMarkerHover 
+}: { 
+  properties: Property[]; 
+  selectedPropertyId?: string; 
+  onMarkerClick: (id: string) => void;
+  onMarkerHover: (id: string) => void;
+}) => {
+  // If we have Leaflet imported directly
+  return (
+    <div className="h-full w-full">
+      <Map 
+        height="h-full" 
+        className="w-full h-full"
+      />
     </div>
   );
 };

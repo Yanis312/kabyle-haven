@@ -20,6 +20,7 @@ import BookingRequestForm from "@/components/BookingRequestForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import Map from "@/components/Map";
 
 interface PropertyDetailData {
   id: string;
@@ -313,10 +314,26 @@ const PropertyDetail = () => {
               {/* Location Map */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold mb-3">Emplacement</h3>
-                <PropertyMap 
-                  properties={[property]} 
-                  selectedPropertyId={property.id}
-                />
+                <div className="h-80 rounded-lg overflow-hidden border shadow-sm">
+                  {property.latitude && property.longitude ? (
+                    <Map 
+                      latitude={property.latitude} 
+                      longitude={property.longitude} 
+                      readOnly={true}
+                      height="h-full"
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center bg-gray-100">
+                      <p className="text-gray-500">Localisation non disponible</p>
+                    </div>
+                  )}
+                </div>
+                {property.address && (
+                  <p className="mt-2 text-sm text-gray-500 flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {property.address}
+                  </p>
+                )}
               </div>
             </div>
             
