@@ -1,20 +1,26 @@
 
 import { useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Property } from "@/data/properties";
-import { format, isAfter, isBefore, isValid, parse, startOfDay } from "date-fns";
+import { format, isAfter, isBefore, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Calendar as CalendarIcon, CheckCircle, BellRing } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, BellRing, Calendar as CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BookingRequestFormProps {
   property: Property;
@@ -45,13 +51,102 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
   const hasAvailability = () => {
     if (!property.availability) return false;
     
-    // If it's a JSON object from Supabase
+    // If it's a JSON object from Supabase with start_date
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
-      return Boolean(property.availability.start_date) && Boolean(property.availability.end_date);
+      return Boolean(property.availability.start_date) && Boolean(property.availability.start_date);
     }
     
     // Original format
     return Boolean(property.availability.startDate) && Boolean(property.availability.endDate);
+  };
+
+  // Get available date range for the calendar
+  const getAvailableDateRange = () => {
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    
+    if (property.availability) {
+      if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+        startDate = safelyParseDate(property.availability.start_date);
+        // For Supabase format, let's handle the case when endDate is not explicitly defined
+        if ('end_date' in property.availability) {
+          endDate = safelyParseDate(property.availability.end_date);
+        } else if (property.availability.endDate) {
+          endDate = safelyParseDate(property.availability.endDate);
+        }
+      } else {
+        startDate = safelyParseDate(property.availability.startDate);
+        endDate = safelyParseDate(property.availability.endDate);
+      }
+    }
+    
+    return { startDate, endDate };
+  };
+
+  const { startDate: availableStartDate, endDate: availableEndDate } = getAvailableDateRange();
+
+  // Generate selectable date ranges based on availability
+  const generateDateRanges = () => {
+    if (!availableStartDate || !availableEndDate) return [];
+    
+    const ranges = [];
+    const startDate = new Date(availableStartDate);
+    const endDate = new Date(availableEndDate);
+    
+    // For simplicity, let's offer weekly and full period options
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    // Full period
+    ranges.push({
+      label: `Toute la période disponible (${format(startDate, "d MMM", { locale: fr })} - ${format(endDate, "d MMM", { locale: fr })})`,
+      start: startDate,
+      end: endDate
+    });
+    
+    // First week
+    const firstWeekEnd = new Date(startDate.getTime() + (6 * oneDay));
+    if (firstWeekEnd < endDate) {
+      ranges.push({
+        label: `Première semaine (${format(startDate, "d MMM", { locale: fr })} - ${format(firstWeekEnd, "d MMM", { locale: fr })})`,
+        start: startDate,
+        end: firstWeekEnd
+      });
+    }
+    
+    // Middle two weeks (if available)
+    const middleStart = new Date(startDate.getTime() + (7 * oneDay));
+    const middleEnd = new Date(middleStart.getTime() + (13 * oneDay));
+    if (middleEnd < endDate) {
+      ranges.push({
+        label: `Deux semaines (${format(middleStart, "d MMM", { locale: fr })} - ${format(middleEnd, "d MMM", { locale: fr })})`,
+        start: middleStart,
+        end: middleEnd
+      });
+    }
+    
+    // Last week
+    const lastWeekStart = new Date(endDate.getTime() - (6 * oneDay));
+    if (lastWeekStart > startDate) {
+      ranges.push({
+        label: `Dernière semaine (${format(lastWeekStart, "d MMM", { locale: fr })} - ${format(endDate, "d MMM", { locale: fr })})`,
+        start: lastWeekStart,
+        end: endDate
+      });
+    }
+    
+    return ranges;
+  };
+
+  const handleDateRangeSelect = (value: string) => {
+    const ranges = generateDateRanges();
+    const selectedRange = ranges.find(range => range.label === value);
+    
+    if (selectedRange) {
+      setDateRange({
+        from: selectedRange.start,
+        to: selectedRange.end
+      });
+    }
   };
 
   // Check if dates are available
@@ -64,7 +159,15 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
     // Determine which format of availability data we have
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
       availableStart = safelyParseDate(property.availability.start_date) || new Date();
-      availableEnd = safelyParseDate(property.availability.end_date) || new Date();
+      
+      // For Supabase format, let's handle the case when endDate is not explicitly defined
+      if ('end_date' in property.availability) {
+        availableEnd = safelyParseDate(property.availability.end_date) || new Date();
+      } else if (property.availability.endDate) {
+        availableEnd = safelyParseDate(property.availability.endDate) || new Date();
+      } else {
+        availableEnd = new Date(); // Fallback
+      }
     } else if (property.availability) {
       availableStart = safelyParseDate(property.availability.startDate) || new Date();
       availableEnd = safelyParseDate(property.availability.endDate) || new Date();
@@ -153,26 +256,6 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
-  // Get available date range for the calendar
-  const getAvailableDateRange = () => {
-    let startDate: Date | null = null;
-    let endDate: Date | null = null;
-    
-    if (property.availability) {
-      if ('start_date' in property.availability) {
-        startDate = safelyParseDate(property.availability.start_date);
-        endDate = safelyParseDate(property.availability.end_date);
-      } else {
-        startDate = safelyParseDate(property.availability.startDate);
-        endDate = safelyParseDate(property.availability.endDate);
-      }
-    }
-    
-    return { startDate, endDate };
-  };
-
-  const { startDate: availableStartDate, endDate: availableEndDate } = getAvailableDateRange();
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -215,30 +298,36 @@ export default function BookingRequestForm({ property }: BookingRequestFormProps
                   <CalendarIcon className="mr-1 h-3 w-3" /> Disponible
                 </Badge>
               </div>
-              <p className="text-sm text-gray-500">
-                Ce logement est disponible du{" "}
-                <span className="font-medium">
-                  {availableStartDate ? format(availableStartDate, "d MMMM yyyy", { locale: fr }) : "?"}
-                </span>{" "}
-                au{" "}
-                <span className="font-medium">
-                  {availableEndDate ? format(availableEndDate, "d MMMM yyyy", { locale: fr }) : "?"}
-                </span>
-              </p>
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
-                className="mx-auto border rounded-md"
-                disabled={availableStartDate && availableEndDate ? [
-                  {
-                    before: availableStartDate,
-                    after: availableEndDate
-                  }
-                ] : undefined}
-                locale={fr}
-                initialFocus
-              />
+              
+              <Alert className="bg-green-50 border-green-200 text-green-800">
+                <CalendarIcon className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  Ce logement est disponible du{" "}
+                  <span className="font-medium">
+                    {availableStartDate ? format(availableStartDate, "d MMMM yyyy", { locale: fr }) : "?"}
+                  </span>{" "}
+                  au{" "}
+                  <span className="font-medium">
+                    {availableEndDate ? format(availableEndDate, "d MMMM yyyy", { locale: fr }) : "?"}
+                  </span>
+                </AlertDescription>
+              </Alert>
+              
+              <div className="pt-2">
+                <label className="text-sm font-medium">Choisissez une période</label>
+                <Select onValueChange={handleDateRangeSelect}>
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue placeholder="Sélectionnez vos dates de séjour" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {generateDateRanges().map((range, index) => (
+                      <SelectItem key={index} value={range.label}>
+                        {range.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             {dateRange?.from && dateRange.to && (

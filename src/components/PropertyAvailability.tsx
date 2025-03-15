@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Property } from "@/data/properties";
 import { Calendar } from "@/components/ui/calendar";
@@ -52,9 +51,14 @@ const PropertyAvailability = ({
     
     // Case where availability is a JSON object from Supabase (format { start_date, end_date })
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      // Properly handle end_date/endDate property
+      const endDateValue = 'end_date' in property.availability 
+        ? property.availability.end_date 
+        : property.availability.endDate;
+        
       return {
         from: safelyParseDate(property.availability.start_date),
-        to: safelyParseDate(property.availability.end_date)
+        to: safelyParseDate(endDateValue)
       };
     }
     
@@ -72,7 +76,12 @@ const PropertyAvailability = ({
     
     // If it's a JSON object from Supabase
     if (typeof property.availability === 'object' && 'start_date' in property.availability) {
-      return Boolean(property.availability.start_date) && Boolean(property.availability.end_date);
+      // Check for either end_date or endDate property
+      const hasEndDate = 'end_date' in property.availability 
+        ? Boolean(property.availability.end_date)
+        : Boolean(property.availability.endDate);
+        
+      return Boolean(property.availability.start_date) && hasEndDate;
     }
     
     // Original format
@@ -92,8 +101,14 @@ const PropertyAvailability = ({
   const getFormattedEndDate = () => {
     if (!property.availability) return null;
     
-    if (typeof property.availability === 'object' && 'end_date' in property.availability) {
-      return safelyParseDate(property.availability.end_date);
+    if (typeof property.availability === 'object' && 'start_date' in property.availability) {
+      // Check if end_date exists, otherwise use endDate
+      if ('end_date' in property.availability) {
+        return safelyParseDate(property.availability.end_date);
+      } else if (property.availability.endDate) {
+        return safelyParseDate(property.availability.endDate);
+      }
+      return null;
     }
     
     return safelyParseDate(property.availability.endDate);
